@@ -1,0 +1,111 @@
+# RelayDesk — one-command local setup.
+#
+#   docker compose up --build
+#
+# Brings up PostgreSQL and all three tiers (channel, decision, core-mock), runs Flyway
+# migrations and loads seed data. Then open http://localhost:18080
+#
+# SECURITY: the secrets below are development-only defaults. Override every *_SECRET /
+# *_KEY variable in production (or export them before `docker compose up`).
+# The database password is likewise a local-dev-only value.
+
+name: relaydesk
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: relay
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-relay-dev-only}
+      POSTGRES_DB: channel
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - relaydesk-pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U relay -d channel"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  decision:
+    build:
+      context: .
+      dockerfile: decision/Dockerfile
+    environment:
+      SERVER_PORT: 8081
+      DB_DECISION_URL: jdbc:postgresql://db:5432/decision
+      DB_USER: relay
+      DB_PASSWORD: ${DB_PASSWORD:-relay-dev-only}
+      SESSION_TOKEN_SECRET: ${SESSION_TOKEN_SECRET:-dev-session-secret-change-me}
+      SCOPE_TOKEN_SECRET: ${SCOPE_TOKEN_SECRET:-dev-scope-secret-change-me}
+      CHANNEL_INTERNAL_KEY: ${DECISION_INTERNAL_KEY:-dev-decision-key-change-me}
+    ports:
+      - "127.0.0.1:18081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8081 && printf 'GET /internal/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  core-mock:
+    build:
+      context: .
+      dockerfile: core-mock/Dockerfile
+    environment:
+      SERVER_PORT: 8082
+      DB_CORE_URL: jdbc:postgresql://db:5432/core
+      DB_USER: relay
+      DB_PASSWORD: ${DB_PASSWORD:-relay-dev-only}
+      SCOPE_TOKEN_SECRET: ${SCOPE_TOKEN_SECRET:-dev-scope-secret-change-me}
+      CORE_INTERNAL_KEY: ${CORE_INTERNAL_KEY:-dev-core-key-change-me}
+    ports:
+      - "127.0.0.1:18082:8082"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8082 && printf 'GET /api/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  channel:
+    build:
+      context: .
+      dockerfile: channel/Dockerfile
+    environment:
+      SERVER_PORT: 8080
+      DB_CHANNEL_URL: jdbc:postgresql://db:5432/channel
+      DB_USER: relay
+      DB_PASSWORD: ${DB_PASSWORD:-relay-dev-only}
+      SESSION_TOKEN_SECRET: ${SESSION_TOKEN_SECRET:-dev-session-secret-change-me}
+      DECISION_INTERNAL_KEY: ${DECISION_INTERNAL_KEY:-dev-decision-key-change-me}
+      CORE_INTERNAL_KEY: ${CORE_INTERNAL_KEY:-dev-core-key-change-me}
+      DECISION_URL: http://decision:8081
+      CORE_URL: http://core-mock:8082
+      ATTACHMENT_DIR: /data/attachments
+      APP_SEED: "true"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health
+    ports:
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - relaydesk-attachments:/data/attachments
+    depends_on:
+      decision:
+        condition: service_healthy
+      core-mock:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+volumes:
+  relaydesk-pgdata:
+  relaydesk-attachments:

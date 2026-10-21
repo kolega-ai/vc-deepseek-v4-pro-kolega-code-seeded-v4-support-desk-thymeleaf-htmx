@@ -1,0 +1,6 @@
+rootProject.name = 'relaydesk'
+
+include 'shared'
+include 'channel'
+include 'decision'
+include 'core-mock'

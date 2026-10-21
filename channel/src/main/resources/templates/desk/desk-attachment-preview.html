@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+  <div class="card card--flat">
+    <div class="row">
+      <span class="grow mono small" th:text="${fileName}">file.txt</span>
+    </div>
+    <pre class="mono" style="white-space:pre-wrap;" th:utext="${body}">attachment preview</pre>
+  </div>
+</body>
+</html>

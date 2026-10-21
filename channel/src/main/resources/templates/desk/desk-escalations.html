@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Escalations — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Escalations', 'escalations', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Escalations</h1>
+        <p class="page-sub">Tickets that need a team lead's attention.</p>
+      </div>
+    </div>
+
+    <form class="filter-bar" th:action="@{/desk/escalations}" method="get"
+          hx-get="/desk/escalations/fragment"
+          hx-target="#escalation-rows"
+          hx-trigger="submit, change delay:200ms from:select, change from:input[type=checkbox]"
+          hx-swap="outerHTML">
+      <div class="field">
+        <label class="field-label" for="e-status">Status</label>
+        <select id="e-status" name="status">
+          <option value="" th:selected="${filter == null or filter.status == null}">All statuses</option>
+          <option value="REQUESTED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'REQUESTED'}">Requested</option>
+          <option value="ACCEPTED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'ACCEPTED'}">Accepted</option>
+          <option value="IN_REVIEW" th:selected="${filter != null and filter.status != null and filter.status.name() == 'IN_REVIEW'}">In review</option>
+          <option value="RESOLVED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'RESOLVED'}">Resolved</option>
+          <option value="REJECTED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'REJECTED'}">Rejected</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="e-team">Team</label>
+        <select id="e-team" name="teamId">
+          <option value="" th:selected="${filter == null or filter.teamId == null}">All teams</option>
+          <option th:each="t : ${teams != null ? teams : {}}" th:value="${t.id}" th:text="${t.name}"
+                  th:selected="${filter != null and filter.teamId != null and filter.teamId.toString() == t.id.toString()}">Team</option>
+        </select>
+      </div>
+      <div class="field field--q">
+        <label class="field-label" for="e-q">Search</label>
+        <input type="search" id="e-q" name="q" placeholder="Ticket ref or subject…" th:value="${filter?.q}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="e-from">From</label>
+        <input type="date" id="e-from" name="from" th:value="${filter?.from}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="e-to">To</label>
+        <input type="date" id="e-to" name="to" th:value="${filter?.to}"/>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        <a class="btn btn-ghost btn-sm" th:href="@{/desk/escalations}">Clear</a>
+      </div>
+    </form>
+
+    <div th:replace="~{fragments :: escalationRows(${page}, ${filter})}"></div>
+
+  </main>
+</body>
+</html>

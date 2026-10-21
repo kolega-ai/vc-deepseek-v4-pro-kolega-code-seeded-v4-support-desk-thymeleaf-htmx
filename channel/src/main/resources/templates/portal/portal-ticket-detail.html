@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Ticket — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Ticket', 'ticket-detail', ~{})}">
+  <main th:fragment="content">
+
+    <p><a th:href="@{/portal/tickets}">‹ Back to My Tickets</a></p>
+
+    <div class="card" th:if="${detail != null}">
+      <div class="row-between">
+        <h1 class="page-title">
+          <span class="mono" th:text="${detail.ref}">TCK-1000</span> —
+          <span th:text="${detail.subject}">Subject</span>
+        </h1>
+        <th:block th:replace="~{fragments :: statusBadge(${detail.status})}">status</th:block>
+      </div>
+
+      <div class="row" style="flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem;">
+        <th:block th:replace="~{fragments :: priorityBadge(${detail.priority})}">priority</th:block>
+        <span class="chip" th:if="${detail.categoryName != null}" th:text="${detail.categoryName}">Category</span>
+        <span class="muted small" th:text="${detail.createdAt != null ? 'Opened ' + #temporals.format(detail.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+      </div>
+
+      <div class="msg-body" style="white-space:pre-wrap; margin:0.75rem 0 0;" th:text="${detail.description}">Description</div>
+      <div class="row muted small" style="gap:1.25rem; margin-top:0.75rem; flex-wrap:wrap;">
+        <span th:if="${detail.orgName != null}" th:text="'Organization: ' + ${detail.orgName}">Organization</span>
+        <span th:if="${detail.requesterName != null}" th:text="'Requested by: ' + ${detail.requesterName}">Requester</span>
+      </div>
+
+      <hr/>
+
+      <div class="deadline-line">
+        <span>Response due: <strong th:text="${detail.slaResponseDeadline != null ? #temporals.format(detail.slaResponseDeadline, 'yyyy-MM-dd HH:mm') : '—'}">—</strong></span>
+        <span>Resolution due: <strong th:text="${detail.slaResolutionDeadline != null ? #temporals.format(detail.slaResolutionDeadline, 'yyyy-MM-dd HH:mm') : '—'}">—</strong></span>
+        <th:block th:replace="~{fragments :: slaBadge(${detail.slaStatus}, false)}">sla</th:block>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Ticket sections">
+        <button type="button" role="tab" class="is-active" aria-selected="true" aria-controls="tab-conversation">Conversation</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tab-attachments">Attachments</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tab-timeline">Status timeline</button>
+      </div>
+
+      <!-- Conversation -->
+      <section id="tab-conversation" class="tab-panel" role="tabpanel" aria-label="Conversation">
+        <div class="thread">
+          <div class="empty" th:if="${detail.messages == null or #lists.isEmpty(detail.messages)}">
+            <span class="empty__icon" aria-hidden="true">✉</span>
+            <p class="empty__title">No messages yet</p>
+            <p class="empty__hint">Replies from you and the support team appear here.</p>
+          </div>
+          <article th:each="m : ${detail.messages}" class="msg">
+            <div class="msg-head">
+              <span class="msg-author" th:text="${m.authorName}">Author</span>
+              <span class="msg-role" th:text="${m.authorRole}">role</span>
+              <time class="msg-time" th:attr="data-timestamp=${m.createdAt}"
+                    th:text="${m.createdAt != null ? #temporals.format(m.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</time>
+            </div>
+            <div class="msg-body" th:text="${m.body}">Message body</div>
+          </article>
+        </div>
+
+        <form class="card card--flat" th:if="${detail.canReply}" th:action="@{/portal/tickets/{id}/reply(id=${detail.id})}" method="post" style="margin-top:1rem; border:1px solid var(--line);">
+          <div class="field">
+            <label class="field-label" for="reply-body">Reply</label>
+            <textarea id="reply-body" name="body" required maxlength="8000" rows="5"
+                      placeholder="Write a reply to the support team…"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Send reply</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Attachments -->
+      <section id="tab-attachments" class="tab-panel" role="tabpanel" aria-label="Attachments" hidden>
+        <div class="table-wrap" th:if="${detail.attachments != null and !#lists.isEmpty(detail.attachments)}">
+          <table class="table">
+            <thead>
+              <tr><th>File</th><th>Uploaded</th><th>Size</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="a : ${detail.attachments}">
+                <td class="cell-main" th:text="${a.originalName}">file.pdf</td>
+                <td class="mono" th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+                <td class="mono" th:text="${#numbers.formatDecimal(a.sizeBytes / 1024.0, 1, 1)} + ' KB'">1.0 KB</td>
+                <td><a class="btn btn-sm" th:href="@{/portal/tickets/{id}/attachments/{attId}(id=${detail.id}, attId=${a.id})}">Download</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="empty" th:if="${detail.attachments == null or #lists.isEmpty(detail.attachments)}">
+          <span class="empty__icon" aria-hidden="true">📎</span>
+          <p class="empty__title">No attachments</p>
+        </div>
+
+        <form class="card card--flat" th:action="@{/portal/tickets/{id}/attachments(id=${detail.id})}" method="post" enctype="multipart/form-data" style="margin-top:1rem; border:1px solid var(--line);">
+          <div class="field file-field">
+            <label class="field-label" for="att-file">Add attachment</label>
+            <input type="file" id="att-file" name="file" required/>
+            <span class="file-label" data-file-label data-file-label-default="No file chosen">No file chosen</span>
+            <p class="field-hint">CSV, PNG, JPEG, PDF or plain text, up to 10 MB.</p>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Upload</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Status timeline -->
+      <section id="tab-timeline" class="tab-panel" role="tabpanel" aria-label="Status timeline" hidden>
+        <th:block th:replace="~{fragments :: timeline(${detail})}"></th:block>
+      </section>
+    </div>
+
+    <div class="empty" th:unless="${detail != null}">
+      <span class="empty__icon" aria-hidden="true">🔍</span>
+      <p class="empty__title">Ticket not found</p>
+      <p class="empty__hint">It may have been removed, or you do not have access.</p>
+      <a class="btn btn-primary" th:href="@{/portal/tickets}">Back to My Tickets</a>
+    </div>
+
+  </main>
+</body>
+</html>

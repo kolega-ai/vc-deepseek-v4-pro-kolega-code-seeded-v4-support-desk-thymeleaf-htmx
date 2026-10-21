@@ -1,0 +1,4 @@
+CREATE TABLE principal_users (id uuid PRIMARY KEY, email varchar(255) NOT NULL UNIQUE, display_name varchar(120) NOT NULL, role varchar(30) NOT NULL, enabled boolean NOT NULL, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL);
+CREATE TABLE principal_team_memberships (id bigserial PRIMARY KEY, user_id uuid NOT NULL REFERENCES principal_users(id), team_id uuid NOT NULL, created_at timestamptz NOT NULL, UNIQUE(user_id, team_id));
+CREATE TABLE principal_org_scopes (id bigserial PRIMARY KEY, user_id uuid NOT NULL REFERENCES principal_users(id), org_id uuid NOT NULL, created_at timestamptz NOT NULL, UNIQUE(user_id, org_id));
+CREATE TABLE role_limits (id bigserial PRIMARY KEY, role varchar(30) NOT NULL, limit_key varchar(60) NOT NULL, limit_value integer NOT NULL, UNIQUE(role, limit_key));

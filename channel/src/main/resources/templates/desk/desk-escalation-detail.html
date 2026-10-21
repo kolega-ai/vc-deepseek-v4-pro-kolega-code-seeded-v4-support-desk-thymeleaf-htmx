@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Escalation — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Escalation', 'escalation-detail', ~{::breadcrumbs})}">
+  <nav th:fragment="breadcrumbs">
+    <a th:href="@{/desk/escalations}">Escalations</a>
+    <span class="crumbs-sep" aria-hidden="true">/</span>
+    <span class="crumbs-current mono" th:text="${detail?.row?.ticketRef}">TCK-1000</span>
+  </nav>
+  <main th:fragment="content">
+
+    <p><a th:href="@{/desk/escalations}">‹ Back to escalations</a></p>
+
+    <div class="card" th:if="${detail != null}">
+      <div class="row-between">
+        <h1 class="page-title">
+          <a class="mono" th:href="@{/desk/tickets/{id}(id=${detail.row.ticketId})}" th:text="${detail.row.ticketRef}">TCK-1000</a>
+          <span class="muted" th:text="' — ' + ${detail.row.ticketSubject}"> — subject</span>
+        </h1>
+        <th:block th:replace="~{fragments :: escalationStatusBadge(${detail.row.status})}">status</th:block>
+      </div>
+
+      <div class="row" style="flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem;">
+        <span class="chip" th:if="${detail.row.teamName != null}" th:text="'Team: ' + ${detail.row.teamName}">Team</span>
+        <span class="chip chip--neutral" th:if="${detail.row.requesterName != null}" th:text="'Requester: ' + ${detail.row.requesterName}">Requester</span>
+        <span class="chip chip--neutral" th:text="'Assignee: ' + (${detail.row.assigneeName != null} ? ${detail.row.assigneeName} : 'Unassigned')">Assignee</span>
+        <span class="chip chip--warn" th:if="${detail.row.slaException}">SLA exception</span>
+        <span class="muted small" th:text="${detail.row.createdAt != null ? 'Opened ' + #temporals.format(detail.row.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+      </div>
+
+      <hr/>
+
+      <div class="section-grid">
+        <!-- Decision actions -->
+        <div class="card card--flat" style="border:1px solid var(--line);" th:if="${detail.canDecide}">
+          <h2 class="card-title">Decide</h2>
+          <div class="row" style="flex-wrap:wrap;">
+            <form th:action="@{/desk/escalations/{id}/accept(id=${detail.row.id})}" method="post">
+              <button type="submit" class="btn btn-primary btn-sm"
+                      th:if="${detail.row.status != null and detail.row.status.name() == 'REQUESTED'}">Accept</button>
+            </form>
+            <form th:action="@{/desk/escalations/{id}/review(id=${detail.row.id})}" method="post">
+              <button type="submit" class="btn btn-primary btn-sm"
+                      th:if="${detail.row.status != null and detail.row.status.name() == 'ACCEPTED'}">Start review</button>
+            </form>
+          </div>
+
+          <form th:action="@{/desk/escalations/{id}/reject(id=${detail.row.id})}" method="post"
+                th:if="${detail.row.status != null and (detail.row.status.name() == 'REQUESTED' or detail.row.status.name() == 'IN_REVIEW')}">
+            <div class="field">
+              <label class="field-label req" for="reject-reason">Reject reason</label>
+              <textarea id="reject-reason" name="reason" required maxlength="2000" rows="3"
+                        placeholder="Why is this escalation being sent back?"
+                        th:text="${rejectForm?.reason}"></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-danger btn-sm" data-confirm="Reject this escalation? The ticket returns to OPEN.">Reject escalation</button>
+            </div>
+          </form>
+
+          <form th:action="@{/desk/escalations/{id}/resolve(id=${detail.row.id})}" method="post"
+                th:if="${detail.row.status != null and (detail.row.status.name() == 'ACCEPTED' or detail.row.status.name() == 'IN_REVIEW')}">
+            <hr/>
+            <div class="field">
+              <label class="field-label req" for="resolve-resolution">Resolution</label>
+              <textarea id="resolve-resolution" name="resolution" required maxlength="4000" rows="4"
+                        placeholder="Summarise the outcome for the record."
+                        th:text="${resolveForm?.resolution}"></textarea>
+            </div>
+            <div class="field">
+              <label class="check-line">
+                <input type="checkbox" name="resolveTicket" value="true" th:checked="${resolveForm?.resolveTicket}"/>
+                <span>Also resolve the ticket</span>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Resolve escalation</button>
+            </div>
+          </form>
+        </div>
+
+        <form class="card card--flat" style="border:1px solid var(--line);"
+              th:action="@{/desk/escalations/{id}/withdraw(id=${detail.row.id})}" method="post">
+          <h2 class="card-title">Withdraw escalation</h2>
+          <p class="small muted">Removes the escalation and puts the ticket back in the queue.</p>
+          <div class="field">
+            <label class="field-label" for="withdraw-reason">Why are you withdrawing it?</label>
+            <input type="text" id="withdraw-reason" name="reason" maxlength="500"
+                   placeholder="Handled it myself"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-sm"
+                    data-confirm="Withdraw this escalation and return the ticket to the queue?">Withdraw</button>
+          </div>
+        </form>
+
+        <!-- Reason panel -->
+        <div class="card card--flat" style="background:#F7F5FD; border:1px solid #DDD3F5;">
+          <h2 class="card-title">Escalation reason</h2>
+          <p class="small strong" style="color:var(--violet);">Internal — not visible to customers</p>
+          <p class="pre-wrap" th:text="${detail.row.reason}">Reason</p>
+          <p class="muted small" th:if="${detail.slaExceptionReason != null and !detail.slaExceptionReason.isEmpty()}">
+            SLA exception reason: <span th:text="${detail.slaExceptionReason}">reason</span>
+          </p>
+        </div>
+
+        <!-- Resolution panel -->
+        <div class="card card--flat" style="border:1px solid var(--line);"
+             th:if="${detail.row.status != null and (detail.row.status.name() == 'RESOLVED' or detail.row.status.name() == 'REJECTED')}">
+          <h2 class="card-title">Outcome</h2>
+          <th:block th:if="${detail.row.status.name() == 'RESOLVED'}">
+            <p class="pre-wrap" th:text="${detail.resolution}">Resolution</p>
+            <p class="muted small" th:text="${detail.resolvedAt != null ? 'Resolved ' + #temporals.format(detail.resolvedAt, 'yyyy-MM-dd HH:mm') : ''}">—</p>
+          </th:block>
+          <th:block th:if="${detail.row.status.name() == 'REJECTED'}">
+            <p class="muted">This escalation was rejected and the ticket returned to the queue.</p>
+            <p class="muted small" th:text="${detail.resolvedAt != null ? 'Rejected ' + #temporals.format(detail.resolvedAt, 'yyyy-MM-dd HH:mm') : ''}">—</p>
+          </th:block>
+        </div>
+
+        <!-- Ticket context -->
+        <div class="card card--flat" style="border:1px solid var(--line);" th:if="${detail.ticket != null}">
+          <h2 class="card-title">Ticket context</h2>
+          <p>
+            <th:block th:replace="~{fragments :: statusBadge(${detail.ticket.status})}">status</th:block>
+            <th:block th:replace="~{fragments :: priorityBadge(${detail.ticket.priority})}">priority</th:block>
+            <th:block th:replace="~{fragments :: slaBadge(${detail.ticket.slaStatus}, false)}">sla</th:block>
+          </p>
+          <p class="muted small" th:if="${detail.ticket.orgName != null}" th:text="'Org: ' + ${detail.ticket.orgName}">Org</p>
+          <p class="muted small" th:if="${detail.ticket.slaResolutionDeadline != null}"
+             th:text="${'Resolution due ' + #temporals.format(detail.ticket.slaResolutionDeadline, 'yyyy-MM-dd HH:mm')}">—</p>
+          <p><a class="btn btn-sm" th:href="@{/desk/tickets/{id}(id=${detail.row.ticketId})}">Open ticket</a></p>
+        </div>
+      </div>
+
+      <h2 class="card-title" style="margin-top:1.2rem;">Escalation history</h2>
+      <div class="table-wrap" th:if="${detail.audit != null and !#lists.isEmpty(detail.audit)}">
+        <table class="table table--mini">
+          <thead>
+            <tr><th>Time</th><th>Actor</th><th>Action</th><th>Before → After</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="r : ${detail.audit}">
+              <td class="cell-slim mono" th:text="${r.occurredAt != null ? #temporals.format(r.occurredAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              <td class="mono" th:text="${r.actorEmail}">actor</td>
+              <td><span class="chip chip--info mono" th:text="${r.action}">action</span></td>
+              <td>
+                <span class="truncate mono small muted" th:if="${r.beforeValue != null and !r.beforeValue.isEmpty()}" th:text="${r.beforeValue}">before</span>
+                <span class="muted small" th:if="${r.beforeValue != null and !r.beforeValue.isEmpty() or r.afterValue != null and !r.afterValue.isEmpty()}"> → </span>
+                <span class="truncate mono small" th:if="${r.afterValue != null and !r.afterValue.isEmpty()}" th:text="${r.afterValue}">after</span>
+                <span class="muted small" th:if="${(r.beforeValue == null or r.beforeValue.isEmpty()) and (r.afterValue == null or r.afterValue.isEmpty())}">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="empty" th:if="${detail.audit == null or #lists.isEmpty(detail.audit)}">
+        <span class="empty__icon" aria-hidden="true">≡</span>
+        <p class="empty__title">No history recorded</p>
+      </div>
+    </div>
+
+    <div class="empty" th:unless="${detail != null}">
+      <span class="empty__icon" aria-hidden="true">🔍</span>
+      <p class="empty__title">Escalation not found</p>
+      <p class="empty__hint">It may not exist, or it is outside your teams.</p>
+      <a class="btn btn-primary" th:href="@{/desk/escalations}">Back to escalations</a>
+    </div>
+
+  </main>
+</body>
+</html>

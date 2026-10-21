@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('SLA Policies — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'SLA Policies', 'sla', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">SLA Policies</h1>
+        <p class="page-sub">One policy per priority governs response and resolution deadlines.</p>
+      </div>
+    </div>
+
+    <div class="flash flash--info" role="status" style="margin-bottom:1.1rem;">
+      Deadlines are read server-side per priority — customers never choose SLA terms.
+    </div>
+
+    <div class="card">
+      <div class="empty" th:if="${policies == null or #lists.isEmpty(policies)}">
+        <span class="empty__icon" aria-hidden="true">◷</span>
+        <p class="empty__title">No policies yet</p>
+      </div>
+
+      <div class="table-wrap" th:unless="${policies == null or #lists.isEmpty(policies)}">
+        <table class="table">
+          <thead>
+            <tr><th>Name</th><th>Priority</th><th>Response</th><th>Resolution</th><th>Business hours</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="p : ${policies}">
+              <td class="cell-main" th:text="${p.name}">Policy</td>
+              <td><th:block th:replace="~{fragments :: priorityBadge(${p.priority})}">p</th:block></td>
+              <td class="mono" th:text="${p.responseMinutes} + ' min'">60 min</td>
+              <td class="mono" th:text="${p.resolutionMinutes} + ' min'">480 min</td>
+              <td>
+                <span class="badge badge--blue" th:if="${p.businessHoursOnly}"><span class="badge-dot" aria-hidden="true"></span>Business hours</span>
+                <span class="badge badge--gray" th:unless="${p.businessHoursOnly}"><span class="badge-dot" aria-hidden="true"></span>24×7</span>
+              </td>
+              <td>
+                <span class="badge badge--green" th:if="${p.active}"><span class="badge-dot" aria-hidden="true"></span>Active</span>
+                <span class="badge badge--gray" th:unless="${p.active}"><span class="badge-dot" aria-hidden="true"></span>Inactive</span>
+              </td>
+              <td class="cell-slim">
+                <div class="row" style="gap:0.4rem;">
+                  <form th:action="@{/admin/sla/{id}(id=${p.id})}" method="post" class="inline-edit">
+                    <input type="text" name="name" required maxlength="100" aria-label="Policy name" th:value="${p.name}"/>
+                    <select name="priority" aria-label="Priority">
+                      <option value="LOW" th:selected="${p.priority != null and p.priority.name() == 'LOW'}">Low</option>
+                      <option value="MEDIUM" th:selected="${p.priority != null and p.priority.name() == 'MEDIUM'}">Medium</option>
+                      <option value="HIGH" th:selected="${p.priority != null and p.priority.name() == 'HIGH'}">High</option>
+                      <option value="URGENT" th:selected="${p.priority != null and p.priority.name() == 'URGENT'}">Urgent</option>
+                    </select>
+                    <input type="number" name="responseMinutes" required min="5" max="43200" aria-label="Response minutes" th:value="${p.responseMinutes}" style="width:110px;"/>
+                    <input type="number" name="resolutionMinutes" required min="10" max="525600" aria-label="Resolution minutes" th:value="${p.resolutionMinutes}" style="width:120px;"/>
+                    <label class="check-line">
+                      <input type="checkbox" name="businessHoursOnly" value="true" th:checked="${p.businessHoursOnly}"/>
+                      <span>Business hours</span>
+                    </label>
+                    <label class="check-line">
+                      <input type="checkbox" name="active" value="true" th:checked="${p.active}"/>
+                      <span>Active</span>
+                    </label>
+                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                  </form>
+                  <form th:action="@{/admin/sla/{id}/delete(id=${p.id})}" method="post">
+                    <button type="submit" class="btn btn-sm btn-danger"
+                            data-confirm="Delete this SLA policy? Tickets using it keep their existing deadlines.">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:640px; margin-top:1.1rem;">
+      <h2 class="card-title">Create policy</h2>
+      <form th:action="@{/admin/sla}" method="post">
+        <div class="form-grid">
+          <div class="field">
+            <label class="field-label req" for="s-name">Name</label>
+            <input type="text" id="s-name" name="name" required maxlength="100" th:value="${slaForm?.name}"/>
+          </div>
+          <div class="field">
+            <label class="field-label req" for="s-priority">Priority</label>
+            <select id="s-priority" name="priority">
+              <option value="LOW" th:selected="${slaForm?.priority?.name() == 'LOW'}">Low</option>
+              <option value="MEDIUM" th:selected="${slaForm == null or slaForm.priority == null or slaForm.priority.name() == 'MEDIUM'}">Medium</option>
+              <option value="HIGH" th:selected="${slaForm?.priority?.name() == 'HIGH'}">High</option>
+              <option value="URGENT" th:selected="${slaForm?.priority?.name() == 'URGENT'}">Urgent</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label req" for="s-response">Response minutes</label>
+            <input type="number" id="s-response" name="responseMinutes" required min="5" max="43200" th:value="${slaForm?.responseMinutes}"/>
+          </div>
+          <div class="field">
+            <label class="field-label req" for="s-resolution">Resolution minutes</label>
+            <input type="number" id="s-resolution" name="resolutionMinutes" required min="10" max="525600" th:value="${slaForm?.resolutionMinutes}"/>
+          </div>
+          <div class="field">
+            <label class="check-line">
+              <input type="checkbox" name="businessHoursOnly" value="true" th:checked="${slaForm?.businessHoursOnly}"/>
+              <span>Business hours only</span>
+            </label>
+          </div>
+          <div class="field">
+            <label class="check-line">
+              <input type="checkbox" name="active" value="true" th:checked="${slaForm == null or slaForm.active}"/>
+              <span>Active</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create policy</button>
+        </div>
+      </form>
+    </div>
+
+  </main>
+</body>
+</html>

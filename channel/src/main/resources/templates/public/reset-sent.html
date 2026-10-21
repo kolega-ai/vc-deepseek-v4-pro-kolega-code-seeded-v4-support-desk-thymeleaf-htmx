@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Check your inbox — RelayDesk')}"></head>
+<body th:replace="~{layout :: auth(~{::content}, 'Check your inbox')}">
+  <div th:fragment="content">
+    <h1>Check your inbox</h1>
+    <p class="auth-sub">If that address belongs to a RelayDesk account, a reset link is on its way.
+      The link is valid for 30 minutes.</p>
+
+    <div class="flash flash--info" role="status" th:if="${previewLink}" style="margin-bottom:1rem;">
+      <span>Email is mocked locally — open your reset link:
+        <a th:href="${previewLink}" th:text="${previewLink}">reset link</a>
+      </span>
+    </div>
+
+    <div class="auth-foot">
+      <p><a th:href="@{/login}">‹ Back to sign in</a></p>
+    </div>
+  </div>
+</body>
+</html>

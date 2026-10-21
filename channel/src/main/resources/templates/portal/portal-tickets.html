@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('My Tickets — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'My Tickets', 'tickets', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">My Tickets</h1>
+        <p class="page-sub">Every ticket your organisation has raised with RelayDesk.</p>
+      </div>
+      <div class="row">
+        <a class="btn btn-primary" th:href="@{/portal/tickets/new}">✚ New ticket</a>
+        <a class="btn" th:href="@{/portal/tickets/export}">⬇ Export CSV</a>
+      </div>
+    </div>
+
+    <form class="filter-bar" th:action="@{/portal/tickets}" method="get"
+          hx-get="/portal/tickets/fragment"
+          hx-target="#portal-ticket-rows"
+          hx-trigger="submit, change delay:200ms from:select, change from:input[type=checkbox]"
+          hx-swap="outerHTML">
+      <div class="field" style="min-width:150px;">
+        <label class="field-label" for="pt-status">Status</label>
+        <select id="pt-status" name="status">
+          <option value="" th:selected="${filter == null or filter.status == null}">All statuses</option>
+          <option value="NEW" th:selected="${filter != null and filter.status != null and filter.status.name() == 'NEW'}">New</option>
+          <option value="OPEN" th:selected="${filter != null and filter.status != null and filter.status.name() == 'OPEN'}">Open</option>
+          <option value="PENDING_CUSTOMER" th:selected="${filter != null and filter.status != null and filter.status.name() == 'PENDING_CUSTOMER'}">Awaiting customer</option>
+          <option value="PENDING_INTERNAL" th:selected="${filter != null and filter.status != null and filter.status.name() == 'PENDING_INTERNAL'}">Awaiting internal</option>
+          <option value="ESCALATED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'ESCALATED'}">Escalated</option>
+          <option value="RESOLVED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'RESOLVED'}">Resolved</option>
+          <option value="CLOSED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'CLOSED'}">Closed</option>
+        </select>
+      </div>
+      <div class="field field--q">
+        <label class="field-label" for="pt-q">Search</label>
+        <input type="search" id="pt-q" name="q" placeholder="Subject or ref…" th:value="${filter?.q}"/>
+      </div>
+      <div class="field" style="min-width:150px;">
+        <label class="field-label" for="pt-from">From</label>
+        <input type="date" id="pt-from" name="from" th:value="${filter?.from}"/>
+      </div>
+      <div class="field" style="min-width:150px;">
+        <label class="field-label" for="pt-to">To</label>
+        <input type="date" id="pt-to" name="to" th:value="${filter?.to}"/>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        <a class="btn btn-ghost btn-sm" th:href="@{/portal/tickets}">Clear</a>
+      </div>
+    </form>
+
+    <div th:replace="~{fragments :: portalTicketRows(${page}, ${filter})}"></div>
+
+  </main>
+</body>
+</html>

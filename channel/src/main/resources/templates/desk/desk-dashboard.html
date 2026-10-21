@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{layout :: head('Desk — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Desk Dashboard', 'dashboard', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Desk dashboard</h1>
+        <p class="page-sub">The support queue at a glance.</p>
+      </div>
+      <a class="btn btn-primary" th:href="@{/desk/queue}">Open ticket queue</a>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-card__chip" aria-hidden="true">▤</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.openTickets != null ? stats.openTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Open</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--info" aria-hidden="true">✦</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.newTickets != null ? stats.newTickets : 0}">0</span><br/>
+          <span class="stat-card__label">New</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--danger" aria-hidden="true">⏱</span>
+        <span>
+          <span class="stat-card__value stat-card__value--danger" th:text="${stats?.overdueTickets != null ? stats.overdueTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Overdue</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--warn" aria-hidden="true">⚑</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.escalatedTickets != null ? stats.escalatedTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Escalated</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--info" aria-hidden="true">✓</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.resolvedToday != null ? stats.resolvedToday : 0}">0</span><br/>
+          <span class="stat-card__label">Resolved today</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--violet" aria-hidden="true">◉</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.myOpenTickets != null ? stats.myOpenTickets : 0}">0</span><br/>
+          <span class="stat-card__label">My open</span>
+        </span>
+      </div>
+      <div class="stat-card" sec:authorize="hasAnyRole('ROLE_TEAM_LEAD','ROLE_SUPPORT_ADMIN')">
+        <span class="stat-card__chip stat-card__chip--danger" aria-hidden="true">⚑</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.pendingEscalations != null ? stats.pendingEscalations : 0}">0</span><br/>
+          <span class="stat-card__label">Pending escalations</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- SLA health strip -->
+    <div class="sla-strip">
+      <span class="sla-strip__label">SLA health</span>
+      <th:block th:if="${stats != null and stats.statusBuckets != null}">
+        <span class="chip chip--neutral" th:each="b : ${stats.statusBuckets}"
+              th:text="${b.key} + ' · ' + ${b.count}">OPEN · 5</span>
+      </th:block>
+      <span class="muted small" th:if="${stats == null or stats.statusBuckets == null or #lists.isEmpty(stats.statusBuckets)}">No active tickets.</span>
+    </div>
+
+    <div class="section-grid">
+      <!-- My queue preview -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">My queue</h2>
+          <a class="btn btn-sm" th:href="@{/desk/queue}">Full queue</a>
+        </div>
+        <div class="empty" th:if="${recent == null or #lists.isEmpty(recent)}">
+          <span class="empty__icon" aria-hidden="true">▤</span>
+          <p class="empty__title">Queue is clear</p>
+          <p class="empty__hint">New tickets land here when customers write in.</p>
+        </div>
+        <div class="table-wrap" th:unless="${recent == null or #lists.isEmpty(recent)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>Ref</th><th>Subject</th><th>Priority</th><th>Status</th><th>SLA</th><th>Updated</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="t : ${recent}">
+                <td><a class="mono" th:href="@{/desk/tickets/{id}(id=${t.id})}" th:text="${t.ref}">TCK-1000</a></td>
+                <td class="truncate" th:text="${t.subject}">Subject</td>
+                <td><th:block th:replace="~{fragments :: priorityBadge(${t.priority})}">p</th:block></td>
+                <td><th:block th:replace="~{fragments :: statusBadge(${t.status})}">s</th:block></td>
+                <td><th:block th:replace="~{fragments :: slaBadge(${t.slaStatus}, ${t.overdue})}">sla</th:block></td>
+                <td class="mono small" th:text="${t.updatedAt != null ? #temporals.format(t.updatedAt, 'yyyy-MM-dd HH:mm') : ''}">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stack">
+        <!-- Overdue -->
+        <div class="card">
+          <div class="card-head">
+            <h2 class="card-title">Overdue <span class="muted small" th:if="${overdue != null}" th:text="'(' + ${#lists.size(overdue)} + ')'">(0)</span></h2>
+            <a class="btn btn-sm" th:href="@{/desk/reports}">SLA report</a>
+          </div>
+          <div class="empty" th:if="${overdue == null or #lists.isEmpty(overdue)}">
+            <span class="empty__icon" aria-hidden="true">✓</span>
+            <p class="empty__title">Nothing overdue</p>
+          </div>
+          <ul class="list-plain" th:unless="${overdue == null or #lists.isEmpty(overdue)}">
+            <li th:each="t : ${overdue}">
+              <a class="mono grow" th:href="@{/desk/tickets/{id}(id=${t.id})}" th:text="${t.ref}">TCK-1000</a>
+              <span class="truncate muted" th:text="${t.subject}">Subject</span>
+              <span class="mono small" th:text="${t.slaResolutionDeadline != null ? 'due ' + #temporals.format(t.slaResolutionDeadline, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pending escalations (leads/admin) -->
+        <div class="card" sec:authorize="hasAnyRole('ROLE_TEAM_LEAD','ROLE_SUPPORT_ADMIN')">
+          <div class="card-head">
+            <h2 class="card-title">Pending escalations</h2>
+            <a class="btn btn-sm" th:href="@{/desk/escalations}">Escalation queue</a>
+          </div>
+          <div class="empty" th:if="${escalations == null or #lists.isEmpty(escalations)}">
+            <span class="empty__icon" aria-hidden="true">⚑</span>
+            <p class="empty__title">No pending escalations</p>
+          </div>
+          <ul class="list-plain" th:unless="${escalations == null or #lists.isEmpty(escalations)}">
+            <li th:each="e : ${escalations}">
+              <a class="mono grow" th:href="@{/desk/escalations/{id}(id=${e.id})}" th:text="${e.ticketRef}">TCK-1000</a>
+              <span class="truncate muted" th:text="${e.ticketSubject}">Subject</span>
+              <th:block th:replace="~{fragments :: escalationStatusBadge(${e.status})}">s</th:block>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

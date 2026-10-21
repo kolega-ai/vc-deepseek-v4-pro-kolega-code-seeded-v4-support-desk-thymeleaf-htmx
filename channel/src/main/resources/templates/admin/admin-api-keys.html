@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('API Keys — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'API Keys', 'api-keys', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">API Keys</h1>
+        <p class="page-sub">Bearer keys for the public API. The plaintext key is shown exactly once.</p>
+      </div>
+    </div>
+
+    <div class="one-time-key" th:if="${newKey}">
+      <div class="one-time-key__label">Copy this key now — it will not be shown again</div>
+      <div class="one-time-key__value" th:text="${newKey}">rdk_…</div>
+      <p class="one-time-key__note">Store it somewhere safe. RelayDesk keeps only a SHA-256 hash of this key.</p>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <h2 class="card-title">Keys</h2>
+        <div class="empty" th:if="${keys == null or #lists.isEmpty(keys)}">
+          <span class="empty__icon" aria-hidden="true">⚿</span>
+          <p class="empty__title">No API keys yet</p>
+        </div>
+
+        <div class="table-wrap" th:unless="${keys == null or #lists.isEmpty(keys)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>Name</th><th>Prefix</th><th>Owner</th><th>Scopes</th><th>Status</th><th>Last used</th><th>Expires</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="k : ${keys}">
+                <td class="cell-main" th:text="${k.name}">Key</td>
+                <td class="mono" th:text="${k.prefix}">rdk_…</td>
+                <td class="mono" th:text="${k.ownerEmail}">owner</td>
+                <td>
+                  <div class="chip-row">
+                    <span class="chip chip--info" th:each="s : ${#strings.arraySplit(k.scopes != null ? k.scopes : '', ',')}"
+                          th:if="${!s.isEmpty()}" th:text="${s}">scope</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge badge--green" th:if="${k.enabled}"><span class="badge-dot" aria-hidden="true"></span>Active</span>
+                  <span class="badge badge--gray" th:unless="${k.enabled}"><span class="badge-dot" aria-hidden="true"></span>Revoked</span>
+                </td>
+                <td class="cell-slim mono" th:text="${k.lastUsedAt != null ? #temporals.format(k.lastUsedAt, 'yyyy-MM-dd HH:mm') : 'Never'}">Never</td>
+                <td class="cell-slim mono" th:text="${k.expiresAt != null ? #temporals.format(k.expiresAt, 'yyyy-MM-dd') : 'Never'}">Never</td>
+                <td class="cell-slim">
+                  <form th:action="@{/admin/api-keys/{id}/revoke(id=${k.id})}" method="post" th:if="${k.enabled}">
+                    <button type="submit" class="btn btn-sm btn-danger" data-confirm="Revoke this API key? Applications using it will stop working.">Revoke</button>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Create key</h2>
+        <form th:action="@{/admin/api-keys}" method="post">
+          <div class="field">
+            <label class="field-label req" for="k-name">Name</label>
+            <input type="text" id="k-name" name="name" required maxlength="100" th:value="${apiKeyForm?.name}"/>
+          </div>
+          <div class="field">
+            <label class="field-label req" for="k-owner">Owner</label>
+            <select id="k-owner" name="ownerId" required>
+              <option value="" disabled th:selected="${apiKeyForm == null or apiKeyForm.ownerId == null}">Choose an owner…</option>
+              <option th:each="u : ${users != null ? users : {}}" th:value="${u.id}"
+                      th:text="${u.email} + ' (' + ${u.displayName} + ')'"
+                      th:selected="${apiKeyForm != null and apiKeyForm.ownerId != null and apiKeyForm.ownerId.toString() == u.id.toString()}">Owner</option>
+            </select>
+            <p class="field-hint">For customer owners the org is forced to the owner's scope on create.</p>
+          </div>
+          <div class="field">
+            <label class="field-label">Scopes</label>
+            <label class="check-line">
+              <input type="checkbox" name="scopes" value="tickets:create"
+                     th:checked="${apiKeyForm != null and apiKeyForm.scopes != null and apiKeyForm.scopes.contains('tickets:create')}"/>
+              <span>tickets:create</span>
+            </label>
+            <label class="check-line">
+              <input type="checkbox" name="scopes" value="tickets:read"
+                     th:checked="${apiKeyForm != null and apiKeyForm.scopes != null and apiKeyForm.scopes.contains('tickets:read')}"/>
+              <span>tickets:read</span>
+            </label>
+          </div>
+          <div class="field">
+            <label class="field-label" for="k-expires">Expires at <span class="muted">(optional)</span></label>
+            <input type="date" id="k-expires" name="expiresAt" th:value="${apiKeyForm?.expiresAt}"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create key</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

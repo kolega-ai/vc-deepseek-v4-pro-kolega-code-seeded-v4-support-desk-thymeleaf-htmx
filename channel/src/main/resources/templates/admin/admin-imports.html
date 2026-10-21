@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Imports — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Imports', 'imports', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Imports</h1>
+        <p class="page-sub">Bulk-create organisations and contacts in the customer core via CSV.</p>
+      </div>
+    </div>
+
+    <div class="config-grid">
+      <div class="card">
+        <h2 class="card-title">Customers CSV</h2>
+        <p class="field-hint">Columns: organization_name, plan, address, contact_first_name,
+          contact_last_name, contact_email, contact_phone, contact_title.</p>
+        <a class="btn btn-sm" th:href="@{/admin/imports/template/customers}">⬇ Download template</a>
+        <hr/>
+        <form th:action="@{/admin/imports/run}" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="kind" value="customers"/>
+          <div class="field file-field">
+            <label class="field-label" for="import-customers-file">CSV file</label>
+            <input type="file" id="import-customers-file" name="file" accept=".csv,text/csv" required/>
+            <span class="file-label" data-file-label data-file-label-default="No file chosen">No file chosen</span>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Import customers</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Contacts CSV</h2>
+        <p class="field-hint">Columns: organization_name, first_name, last_name, email, phone, title.
+          The organisation must already exist.</p>
+        <a class="btn btn-sm" th:href="@{/admin/imports/template/contacts}">⬇ Download template</a>
+        <hr/>
+        <form th:action="@{/admin/imports/run}" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="kind" value="contacts"/>
+          <div class="field file-field">
+            <label class="field-label" for="import-contacts-file">CSV file</label>
+            <input type="file" id="import-contacts-file" name="file" accept=".csv,text/csv" required/>
+            <span class="file-label" data-file-label data-file-label-default="No file chosen">No file chosen</span>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Import contacts</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <h2 class="card-title" style="margin-top:1.2rem;">Import history</h2>
+    <div class="card">
+      <div class="empty" th:if="${jobs == null or #lists.isEmpty(jobs)}">
+        <span class="empty__icon" aria-hidden="true">⇑</span>
+        <p class="empty__title">No imports yet</p>
+      </div>
+
+      <div class="table-wrap" th:unless="${jobs == null or #lists.isEmpty(jobs)}">
+        <table class="table">
+          <thead>
+            <tr><th>Kind</th><th>File</th><th>Status</th><th>Rows</th><th>OK</th><th>Failed</th><th>Started</th><th>Finished</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="j : ${jobs}">
+              <td>
+                <span class="badge badge--violet" th:if="${j.kind != null and j.kind.name() == 'CUSTOMERS'}"><span class="badge-dot" aria-hidden="true"></span>Customers</span>
+                <span class="badge badge--blue" th:if="${j.kind != null and j.kind.name() == 'CONTACTS'}"><span class="badge-dot" aria-hidden="true"></span>Contacts</span>
+              </td>
+              <td class="truncate mono" th:text="${j.fileName}">file.csv</td>
+              <td>
+                <span class="badge badge--amber" th:if="${j.status != null and j.status.name() == 'PROCESSING'}"><span class="badge-dot" aria-hidden="true"></span>Processing</span>
+                <span class="badge badge--green" th:if="${j.status != null and j.status.name() == 'COMPLETED'}"><span class="badge-dot" aria-hidden="true"></span>Completed</span>
+                <span class="badge badge--red" th:if="${j.status != null and j.status.name() == 'FAILED'}"><span class="badge-dot" aria-hidden="true"></span>Failed</span>
+              </td>
+              <td class="num" th:text="${j.rowsTotal}">0</td>
+              <td class="num" th:text="${j.rowsOk}">0</td>
+              <td class="num" th:classappend="${j.rowsFailed > 0} ? 'strong'" th:text="${j.rowsFailed}">0</td>
+              <td class="cell-slim mono" th:text="${j.createdAt != null ? #temporals.format(j.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              <td class="cell-slim mono" th:text="${j.finishedAt != null ? #temporals.format(j.finishedAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              <td class="cell-slim">
+                <a class="btn btn-sm" th:href="@{/admin/imports/{id}/errors(id=${j.id})}" th:if="${j.rowsFailed > 0}">⬇ Error report</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

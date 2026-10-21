@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Exports — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Exports', 'exports', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Exports</h1>
+        <p class="page-sub">Download CSVs for offline analysis. Every export is audited.</p>
+      </div>
+    </div>
+
+    <div class="flash flash--info" role="status" style="margin-bottom:1.1rem;">
+      Exports are audited — one audit event per export, naming the resource class and row count.
+    </div>
+
+    <div class="config-grid">
+      <div class="card">
+        <h2 class="card-title">⬇ Tickets</h2>
+        <form th:action="@{/admin/exports/tickets}" method="get">
+          <div class="field">
+            <label class="field-label" for="x-t-status">Status</label>
+            <select id="x-t-status" name="status">
+              <option value="">All statuses</option>
+              <option value="NEW">New</option>
+              <option value="OPEN">Open</option>
+              <option value="PENDING_CUSTOMER">Awaiting customer</option>
+              <option value="PENDING_INTERNAL">Awaiting internal</option>
+              <option value="ESCALATED">Escalated</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-t-from">From</label>
+            <input type="date" id="x-t-from" name="from"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-t-to">To</label>
+            <input type="date" id="x-t-to" name="to"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-t-q">Search</label>
+            <input type="search" id="x-t-q" name="q" placeholder="Subject or ref…"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Export tickets CSV</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">⬇ SLA report</h2>
+        <form th:action="@{/admin/exports/sla}" method="get">
+          <div class="field">
+            <label class="field-label" for="x-s-team">Team</label>
+            <select id="x-s-team" name="teamId" th:if="${teams != null}">
+              <option value="">All teams</option>
+              <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.name}">Team</option>
+            </select>
+            <input type="text" name="teamId" th:unless="${teams != null}" class="mono"
+                   placeholder="Team UUID (optional)"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-s-from">From</label>
+            <input type="date" id="x-s-from" name="from"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-s-to">To</label>
+            <input type="date" id="x-s-to" name="to"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Export SLA CSV</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">⬇ Escalations</h2>
+        <form th:action="@{/admin/exports/escalations}" method="get">
+          <div class="field">
+            <label class="field-label" for="x-e-status">Status</label>
+            <select id="x-e-status" name="status">
+              <option value="">All statuses</option>
+              <option value="REQUESTED">Requested</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="IN_REVIEW">In review</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-e-from">From</label>
+            <input type="date" id="x-e-from" name="from"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-e-to">To</label>
+            <input type="date" id="x-e-to" name="to"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-e-q">Search</label>
+            <input type="search" id="x-e-q" name="q" placeholder="Ref or subject…"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Export escalations CSV</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">⬇ Audit log</h2>
+        <form th:action="@{/admin/exports/audit}" method="get">
+          <div class="field">
+            <label class="field-label" for="x-a-actor">Actor email</label>
+            <input type="email" id="x-a-actor" name="actorEmail" placeholder="who@example.com"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-a-action">Action</label>
+            <input type="text" id="x-a-action" name="action" placeholder="e.g. TICKET_CREATED"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-a-type">Resource type</label>
+            <input type="text" id="x-a-type" name="resourceType" placeholder="e.g. TICKET"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-a-from">From</label>
+            <input type="date" id="x-a-from" name="from"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="x-a-to">To</label>
+            <input type="date" id="x-a-to" name="to"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Export audit CSV</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

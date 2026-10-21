@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Article — RelayDesk Knowledge Base')}"></head>
+<body th:replace="~{layout :: public(~{::content}, 'Knowledge Base')}">
+  <main th:fragment="content">
+
+    <section class="kb-article" th:if="${article != null}">
+      <p><a th:href="@{/kb}">‹ Back to Knowledge Base</a></p>
+
+      <h1 th:text="${article.title}">Article title</h1>
+      <div class="kb-meta">
+        <span class="chip chip--teal"
+              th:if="${#objects.nullSafe(article, 'categoryName') != null}"
+              th:text="${#objects.nullSafe(article, 'categoryName')}">Category</span>
+        <span th:text="${article.publishedAt != null} ? 'Published ' + ${#temporals.format(article.publishedAt, 'yyyy-MM-dd')} : ''">—</span>
+      </div>
+
+      <div class="kb-body" th:text="${article.body}">Article body — plain text, line breaks preserved.</div>
+
+      <div class="kb-related" th:if="${related != null and !#lists.isEmpty(related)}">
+        <h2>Related articles</h2>
+        <ul class="list-plain">
+          <li th:each="r : ${related}">
+            <a th:href="@{/kb/{slug}(slug=${r.slug})}" th:text="${r.title}">Related article</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="kb-article" th:unless="${article != null}">
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">🔍</span>
+        <p class="empty__title">Article not found</p>
+        <p class="empty__hint">This article may have been unpublished or moved.</p>
+        <a class="btn btn-primary" th:href="@{/kb}">Browse the Knowledge Base</a>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Organisation — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Organisation', 'orgs', ~{::breadcrumbs})}">
+  <nav th:fragment="breadcrumbs">
+    <a th:href="@{/admin/orgs}">Customer Directory</a>
+    <span class="crumbs-sep" aria-hidden="true">/</span>
+    <span class="crumbs-current" th:text="${org?.name}">Org</span>
+  </nav>
+  <main th:fragment="content">
+
+    <p><a th:href="@{/admin/orgs}">‹ Back to directory</a></p>
+
+    <div class="empty" th:unless="${org != null}">
+      <span class="empty__icon" aria-hidden="true">🔍</span>
+      <p class="empty__title">Organisation not found</p>
+      <p class="empty__hint">It may not exist in the customer core.</p>
+      <a class="btn btn-primary" th:href="@{/admin/orgs}">Back to directory</a>
+    </div>
+
+    <th:block th:if="${org != null}">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title" th:text="${org.name}">Org</h1>
+          <p class="page-sub mono" th:text="${org.slug}">slug</p>
+        </div>
+        <div class="row">
+          <span class="badge badge--violet" th:if="${org.plan != null and org.plan == 'Enterprise'}"><span class="badge-dot" aria-hidden="true"></span>Enterprise</span>
+          <span class="badge badge--blue" th:if="${org.plan != null and org.plan == 'Growth'}"><span class="badge-dot" aria-hidden="true"></span>Growth</span>
+          <span class="badge badge--gray" th:if="${org.plan != null and org.plan == 'Starter'}"><span class="badge-dot" aria-hidden="true"></span>Starter</span>
+          <span class="badge badge--green" th:if="${org.status != null and org.status == 'ACTIVE'}"><span class="badge-dot" aria-hidden="true"></span>Active</span>
+          <span class="badge badge--red" th:if="${org.status != null and org.status == 'SUSPENDED'}"><span class="badge-dot" aria-hidden="true"></span>Suspended</span>
+        </div>
+      </div>
+
+      <div class="section-grid">
+        <div class="card">
+          <h2 class="card-title">Edit organisation</h2>
+          <form th:action="@{/admin/orgs/{id}(id=${org.id})}" method="post">
+            <div class="field">
+              <label class="field-label req" for="org-name">Name</label>
+              <input type="text" id="org-name" name="name" required maxlength="200" th:value="${org.name}"/>
+            </div>
+            <div class="field">
+              <label class="field-label" for="org-plan">Plan</label>
+              <select id="org-plan" name="plan">
+                <option value="Starter" th:selected="${org.plan == 'Starter'}">Starter</option>
+                <option value="Growth" th:selected="${org.plan == 'Growth'}">Growth</option>
+                <option value="Enterprise" th:selected="${org.plan == 'Enterprise'}">Enterprise</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="org-address">Address</label>
+              <input type="text" id="org-address" name="address" maxlength="500" th:value="${org.address}"/>
+            </div>
+            <div class="field">
+              <label class="field-label" for="org-status">Status</label>
+              <select id="org-status" name="status">
+                <option value="ACTIVE" th:selected="${org.status == 'ACTIVE'}">Active</option>
+                <option value="SUSPENDED" th:selected="${org.status == 'SUSPENDED'}">Suspended</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save organisation</button>
+            </div>
+          </form>
+
+          <hr/>
+
+          <h2 class="card-title">Entitlements</h2>
+          <div class="empty" th:if="${org.entitlements == null or #lists.isEmpty(org.entitlements)}">
+            <span class="empty__icon" aria-hidden="true">▦</span>
+            <p class="empty__title">No entitlements</p>
+          </div>
+          <div class="table-wrap" th:unless="${org.entitlements == null or #lists.isEmpty(org.entitlements)}">
+            <table class="table table--mini">
+              <thead><tr><th>Product</th><th>Seats</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr th:each="e : ${org.entitlements}">
+                  <td th:text="${e.product}">product</td>
+                  <td class="num" th:text="${e.seats}">0</td>
+                  <td><span class="chip chip--neutral" th:text="${e.status}">status</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Contacts</h2>
+          <div class="empty" th:if="${org.contacts == null or #lists.isEmpty(org.contacts)}">
+            <span class="empty__icon" aria-hidden="true">♟</span>
+            <p class="empty__title">No contacts</p>
+          </div>
+          <div class="table-wrap" th:unless="${org.contacts == null or #lists.isEmpty(org.contacts)}">
+            <table class="table table--mini">
+              <thead><tr><th>Name</th><th>Email</th><th>Title</th><th></th></tr></thead>
+              <tbody>
+                <tr th:each="c : ${org.contacts}">
+                  <td th:text="${c.firstName} + ' ' + ${c.lastName}">Name</td>
+                  <td class="mono" th:text="${c.email}">email</td>
+                  <td class="truncate small" th:text="${c.title}">title</td>
+                  <td class="cell-slim">
+                    <form class="inline-edit" th:action="@{/admin/contacts/{id}(id=${c.id})}" method="post">
+                      <input type="text" name="firstName" required maxlength="100" aria-label="First name" th:value="${c.firstName}"/>
+                      <input type="text" name="lastName" required maxlength="100" aria-label="Last name" th:value="${c.lastName}"/>
+                      <input type="email" name="email" required maxlength="255" aria-label="Email" th:value="${c.email}"/>
+                      <input type="text" name="phone" maxlength="100" aria-label="Phone" th:value="${c.phone}"/>
+                      <input type="text" name="title" maxlength="200" aria-label="Title" th:value="${c.title}"/>
+                      <label class="check-line">
+                        <input type="checkbox" name="active" value="true" th:checked="${c.active}"/>
+                        <span>Active</span>
+                      </label>
+                      <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                    </form>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <hr/>
+
+          <h2 class="card-title">Add contact</h2>
+          <form th:action="@{/admin/orgs/{id}/contacts(id=${org.id})}" method="post">
+            <div class="form-grid">
+              <div class="field">
+                <label class="field-label req" for="c-first">First name</label>
+                <input type="text" id="c-first" name="firstName" required maxlength="100"/>
+              </div>
+              <div class="field">
+                <label class="field-label req" for="c-last">Last name</label>
+                <input type="text" id="c-last" name="lastName" required maxlength="100"/>
+              </div>
+              <div class="field">
+                <label class="field-label req" for="c-email">Email</label>
+                <input type="email" id="c-email" name="email" required maxlength="255"/>
+              </div>
+              <div class="field">
+                <label class="field-label" for="c-phone">Phone</label>
+                <input type="text" id="c-phone" name="phone" maxlength="100"/>
+              </div>
+              <div class="field field--wide">
+                <label class="field-label" for="c-title">Title</label>
+                <input type="text" id="c-title" name="title" maxlength="200"/>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Add contact</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </th:block>
+
+  </main>
+</body>
+</html>

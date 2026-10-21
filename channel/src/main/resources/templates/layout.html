@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<!--
+  RelayDesk layout fragments.
+  head(title)                            — document head (meta csrf, css/js via AssetHelper.bust)
+  shell(content, title, nav, breadcrumbs) — app chrome for authenticated pages
+  auth(content, title)                   — split-panel auth layout
+  public(content, title)                 — minimal public layout
+  errorPage(icon, title, message, code)  — friendly branded error card
+  All user content rendered with default escaping (no th:utext anywhere).
+-->
+
+<head th:fragment="head(title)">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="_csrf" th:content="${_csrf.token}"/>
+  <meta name="description" content="RelayDesk — the customer support desk for Lumina Cloud."/>
+  <title th:text="${title} ?: 'RelayDesk'">RelayDesk</title>
+  <link rel="stylesheet" th:href="@{${@assetHelper.bust('/css/app.css')}}"/>
+  <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}"/>
+  <script th:src="@{/vendor/htmx.min.js}"></script>
+  <script defer th:src="@{${@assetHelper.bust('/js/app.js')}}"></script>
+</head>
+
+<body th:fragment="shell(content, title, nav, breadcrumbs)"
+      class="app-body"
+      th:classappend="${#authorization.expression('isAuthenticated()')} ? (${#authorization.expression('hasRole(''ROLE_CUSTOMER_USER'')')} ? 'role-customer' : (${#authorization.expression('hasRole(''ROLE_SUPPORT_ADMIN'')')} ? 'role-admin' : 'role-staff')) : 'role-anon'">
+
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <aside class="sidebar" id="sidebar" aria-label="Primary">
+    <a class="sidebar-brand" th:href="@{/}">
+      <img th:src="@{/favicon.svg}" alt="" width="30" height="30"/>
+      <span>
+        <span class="brand-name">RelayDesk</span><br/>
+        <span class="brand-sub">Lumina Cloud support</span>
+      </span>
+    </a>
+
+    <nav class="sidebar-nav">
+
+      <!-- Customer portal navigation -->
+      <th:block sec:authorize="hasRole('ROLE_CUSTOMER_USER')">
+        <div class="nav-section">Portal</div>
+        <a class="nav-link" th:href="@{/portal}" th:classappend="${nav == 'portal'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⌂</span><span>Portal Home</span>
+        </a>
+        <a class="nav-link" th:href="@{/portal/tickets}" th:classappend="${nav == 'tickets' or nav == 'ticket-detail' or nav == 'ticket-new'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">▤</span><span>My Tickets</span>
+        </a>
+        <a class="nav-link" th:href="@{/portal/tickets/new}" th:classappend="${nav == 'new-ticket'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">✚</span><span>New Ticket</span>
+        </a>
+        <a class="nav-link" th:href="@{/kb}" th:classappend="${nav == 'kb'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">▣</span><span>Knowledge Base</span>
+        </a>
+        <a class="nav-link" th:href="@{/portal/profile}" th:classappend="${nav == 'profile'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">◉</span><span>Profile</span>
+        </a>
+      </th:block>
+
+      <!-- Staff navigation -->
+      <th:block sec:authorize="hasAnyRole('ROLE_SUPPORT_AGENT','ROLE_TEAM_LEAD','ROLE_SUPPORT_ADMIN')">
+        <div class="nav-section">Desk</div>
+        <a class="nav-link" th:href="@{/desk}" th:classappend="${nav == 'dashboard'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⌂</span><span>Dashboard</span>
+        </a>
+        <a class="nav-link" th:href="@{/desk/queue}" th:classappend="${nav == 'queue' or nav == 'ticket-detail'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">▤</span><span>Ticket Queue</span>
+        </a>
+        <a class="nav-link" th:href="@{/desk/escalations}" th:classappend="${nav == 'escalations' or nav == 'escalation-detail'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⚑</span><span>Escalations</span>
+        </a>
+        <a class="nav-link" th:href="@{/desk/kb}" th:classappend="${nav == 'kb-staff' or nav == 'kb-editor'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">▣</span><span>Knowledge Base</span>
+        </a>
+        <a class="nav-link" th:href="@{/desk/reports}" th:classappend="${nav == 'reports'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">▥</span><span>SLA Reports</span>
+        </a>
+      </th:block>
+
+      <!-- Admin navigation -->
+      <th:block sec:authorize="hasRole('ROLE_SUPPORT_ADMIN')">
+        <div class="nav-section">Admin</div>
+        <a class="nav-link" th:href="@{/admin}" th:classappend="${nav == 'admin-home'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">◈</span><span>Overview</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/users}" th:classappend="${nav == 'users'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">♟</span><span>Users</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/teams}" th:classappend="${nav == 'teams'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">▦</span><span>Teams &amp; Queues</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/categories}" th:classappend="${nav == 'categories'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">◇</span><span>Categories</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/sla}" th:classappend="${nav == 'sla'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">◷</span><span>SLA Policies</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/orgs}" th:classappend="${nav == 'orgs'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⌂</span><span>Customer Directory</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/imports}" th:classappend="${nav == 'imports'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⇑</span><span>Imports</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/exports}" th:classappend="${nav == 'exports'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⇓</span><span>Exports</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/webhooks}" th:classappend="${nav == 'webhooks'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⌁</span><span>Webhooks</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/api-keys}" th:classappend="${nav == 'api-keys'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⚿</span><span>API Keys</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/audit}" th:classappend="${nav == 'audit'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">≡</span><span>Audit Log</span>
+        </a>
+        <a class="nav-link" th:href="@{/admin/settings}" th:classappend="${nav == 'settings'} ? 'is-active'">
+          <span class="nav-icon" aria-hidden="true">⚙</span><span>Settings</span>
+        </a>
+      </th:block>
+
+    </nav>
+
+    <div class="sidebar-foot">RelayDesk · v1.0 · Lumina Cloud, Inc.</div>
+  </aside>
+
+  <div class="overlay" id="sidebar-overlay" hidden></div>
+
+  <div class="app-frame">
+    <header class="topbar">
+      <button type="button" class="icon-btn" id="sidebar-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <span class="crumbs-root">RelayDesk</span>
+        <th:block th:if="${breadcrumbs}">
+          <span class="crumbs-sep" aria-hidden="true">/</span>
+          <th:block th:replace="${breadcrumbs}"></th:block>
+        </th:block>
+        <th:block th:unless="${breadcrumbs}">
+          <span class="crumbs-sep" aria-hidden="true">/</span>
+          <span class="crumbs-current" th:text="${title} ?: 'Home'">Home</span>
+        </th:block>
+      </nav>
+
+      <form class="topbar-search" th:action="@{/search/ticket}" method="get" role="search"
+            sec:authorize="hasAnyRole('ROLE_SUPPORT_AGENT','ROLE_TEAM_LEAD','ROLE_SUPPORT_ADMIN')">
+        <label class="sr-only" for="topbar-ticket-q">Search tickets</label>
+        <input type="search" id="topbar-ticket-q" name="q" placeholder="Find ticket by ref…" autocomplete="off"/>
+      </form>
+
+      <div class="dropdown" sec:authorize="isAuthenticated()">
+        <button type="button" class="icon-btn" aria-label="Notifications"
+                data-dropdown-toggle="notification-dropdown"
+                hx-get="/notifications/fragment"
+                hx-trigger="load, click"
+                hx-target="#notification-dropdown"
+                hx-swap="innerHTML">
+          <span aria-hidden="true">🔔</span>
+        </button>
+        <div class="dropdown-panel" id="notification-dropdown" hidden></div>
+      </div>
+
+      <div class="dropdown" sec:authorize="isAuthenticated()">
+        <button type="button" class="user-chip" data-dropdown-toggle="user-dropdown"
+                aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" aria-hidden="true"
+                th:text="${#authentication.name != null and !#authentication.name.isEmpty()} ? ${#authentication.name.substring(0,1).toUpperCase()} : '?'">?</span>
+          <span class="user-name" th:text="${#authentication.name}">user@example.com</span>
+        </button>
+        <div class="dropdown-panel" id="user-dropdown" hidden>
+          <div class="user-dropdown-head">
+            <span class="user-name" th:text="${#authentication.name}">user@example.com</span>
+            <span class="user-role" sec:authorize="hasRole('ROLE_SUPPORT_ADMIN')">Support admin</span>
+            <span class="user-role" sec:authorize="hasRole('ROLE_TEAM_LEAD')">Team lead</span>
+            <span class="user-role" sec:authorize="hasRole('ROLE_SUPPORT_AGENT')">Support agent</span>
+            <span class="user-role" sec:authorize="hasRole('ROLE_CUSTOMER_USER')">Customer</span>
+          </div>
+          <div class="user-dropdown-links">
+            <a th:href="@{/portal/profile}" sec:authorize="hasRole('ROLE_CUSTOMER_USER')">Profile</a>
+          </div>
+          <form class="logout-form" th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-ghost">Sign out</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <div class="flash-area">
+      <div class="flash flash--success" role="status" th:if="${flashSuccess}" th:text="${flashSuccess}">Saved.</div>
+      <div class="flash flash--error" role="alert" th:if="${flashError}" th:text="${flashError}">Something went wrong.</div>
+      <div class="flash flash--info" role="status" th:if="${flashInfo}" th:text="${flashInfo}">Note.</div>
+    </div>
+
+    <main id="main-content" class="content">
+      <th:block th:replace="${content}"></th:block>
+    </main>
+  </div>
+
+  <div th:replace="~{fragments :: toastContainer}"></div>
+</body>
+
+<!-- Split-panel authentication layout (th:block container — replaces the page's <body>) -->
+<th:block th:fragment="auth(content, title)">
+  <div class="auth-shell">
+    <aside class="auth-brand" aria-hidden="true">
+      <div class="brand-row">
+        <img th:src="@{/favicon.svg}" alt="" width="34" height="34"/>
+        <span class="brand-name">RelayDesk</span>
+      </div>
+      <p class="brand-tagline">Customer support, in sync.</p>
+      <p class="brand-note">The calm, precise support workspace for Lumina Cloud teams and their customers.</p>
+    </aside>
+    <section class="auth-panel">
+      <div class="auth-card">
+        <th:block th:replace="${content}"></th:block>
+      </div>
+    </section>
+  </div>
+  <div th:replace="~{fragments :: toastContainer}"></div>
+</th:block>
+
+<!-- Minimal public layout (landing + knowledge base) -->
+<th:block th:fragment="public(content, title)">
+  <div class="public-shell">
+    <header class="public-topnav">
+      <a class="brand" th:href="@{/}">
+        <img th:src="@{/favicon.svg}" alt="" width="26" height="26"/>
+        RelayDesk
+      </a>
+      <a class="nav-item" th:href="@{/kb}">Knowledge Base</a>
+      <a class="nav-item" th:href="@{/login}">Sign in</a>
+    </header>
+
+    <main id="main-content" class="public-main">
+      <th:block th:replace="${content}"></th:block>
+    </main>
+
+    <footer class="public-footer">
+      <p>© 2026 Lumina Cloud, Inc. — RelayDesk, customer support in sync.</p>
+    </footer>
+  </div>
+  <div th:replace="~{fragments :: toastContainer}"></div>
+</th:block>
+
+<!-- Friendly branded error card (used by error.html and error/*.html) -->
+<th:block th:fragment="errorPage(icon, title, message, code)">
+  <div class="error-shell">
+    <div class="error-card">
+      <span class="error-card__icon" aria-hidden="true" th:text="${icon}">⚠️</span>
+      <div class="error-card__code" th:text="${code}">ERROR</div>
+      <h1 th:text="${title}">Something went wrong</h1>
+      <p th:text="${message}">We could not complete that request.</p>
+      <a class="btn btn-primary" th:href="@{/}">Back to RelayDesk</a>
+    </div>
+  </div>
+</th:block>
+
+</html>

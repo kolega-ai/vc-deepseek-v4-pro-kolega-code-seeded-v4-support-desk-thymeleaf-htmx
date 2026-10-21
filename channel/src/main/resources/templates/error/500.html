@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Internal server error')}"></head>
+<body th:replace="~{layout :: errorPage('⚠️', 'Internal server error', 'Something broke on our side. The team has been notified — please try again shortly.', '500 · Server error')}"></body>
+</html>

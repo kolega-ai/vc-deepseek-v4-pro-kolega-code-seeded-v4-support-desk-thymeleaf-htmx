@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Sign in — RelayDesk')}"></head>
+<body th:replace="~{layout :: auth(~{::content}, 'Sign in')}">
+  <div th:fragment="content">
+    <h1>Sign in</h1>
+    <p class="auth-sub">Welcome back — sign in to your RelayDesk workspace.</p>
+
+    <div class="flash flash--error" role="alert" th:if="${param.error}" style="margin-bottom:1rem;">
+      Invalid email or password.
+    </div>
+    <div class="flash flash--error" role="alert" th:if="${error}" th:text="${error}" style="margin-bottom:1rem;">
+      Invalid email or password.
+    </div>
+    <div class="flash flash--info" role="status" th:if="${param.expired}" style="margin-bottom:1rem;">
+      Your session expired — sign in again.
+    </div>
+
+    <form th:action="@{/login}" method="post">
+      <div class="field">
+        <label class="field-label" for="username">Email address</label>
+        <input type="email" id="username" name="username" autocomplete="username" required
+               placeholder="you@example.com"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required/>
+      </div>
+      <div class="field">
+        <label class="check-line">
+          <input type="checkbox" id="keepSignedIn" name="keepSignedIn" value="true"/>
+          <span>Stay signed in on this device</span>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      </div>
+    </form>
+
+    <div class="auth-foot">
+      <a th:href="@{/forgot-password}">Forgot your password?</a>
+      <p class="auth-sub" style="margin-top:.5rem;">Arriving from a partner operations portal? Continue through your
+        launch link (<span class="mono">/partners/launch</span>).</p>
+    </div>
+
+    <div class="demo-hint">
+      <strong>Demo accounts (seeded locally)</strong>
+      <ul>
+        <li>Support admin — <span class="mono">admin@relaydesk.test</span> / <span class="mono">Admin@Relay1</span></li>
+        <li>Team lead (Billing) — <span class="mono">lead.billing@relaydesk.test</span> / <span class="mono">Lead@Relay1</span></li>
+        <li>Support agent (Platform) — <span class="mono">agent.devon@relaydesk.test</span> / <span class="mono">Agent@Relay1</span></li>
+        <li>Customer (Acme Corp) — <span class="mono">jordan.lee@acme.test</span> / <span class="mono">Customer@Relay1</span></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

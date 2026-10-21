@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Portal — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Portal', 'portal', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Welcome back</h1>
+        <p class="page-sub">Here is what is happening with your support tickets.</p>
+      </div>
+      <a class="btn btn-primary" th:href="@{/portal/tickets/new}">✚ New ticket</a>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-card__chip" aria-hidden="true">▤</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.openTickets != null ? stats.openTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Open tickets</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--info" aria-hidden="true">✓</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.resolvedToday != null ? stats.resolvedToday : 0}">0</span><br/>
+          <span class="stat-card__label">Resolved today</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--neutral" aria-hidden="true">▤</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.totalTickets != null ? stats.totalTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Total tickets</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--violet" aria-hidden="true">🔔</span>
+        <span>
+          <span class="stat-card__value" th:text="${unread != null ? unread : 0}">0</span><br/>
+          <span class="stat-card__label">Unread notifications</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Recent activity</h2>
+          <a class="btn btn-sm" th:href="@{/portal/tickets}">View all</a>
+        </div>
+        <div class="empty" th:if="${recent == null or #lists.isEmpty(recent)}">
+          <span class="empty__icon" aria-hidden="true">📭</span>
+          <p class="empty__title">No tickets yet</p>
+          <p class="empty__hint">Create your first ticket and we will be right with you.</p>
+        </div>
+        <ul class="list-plain" th:unless="${recent == null or #lists.isEmpty(recent)}">
+          <li th:each="t : ${recent}">
+            <span class="grow">
+              <a class="mono" th:href="@{/portal/tickets/{id}(id=${t.id})}" th:text="${t.ref}">TCK-1000</a>
+              <span class="truncate" th:text="' — ' + ${t.subject}"> — subject</span>
+            </span>
+            <th:block th:replace="~{fragments :: statusBadge(${t.status})}">status</th:block>
+            <span class="mono small muted"
+                  th:text="${t.updatedAt != null ? #temporals.format(t.updatedAt, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Quick actions</h2>
+        </div>
+        <div class="quick-actions">
+          <a th:href="@{/portal/tickets/new}"><span aria-hidden="true">✚</span> New ticket</a>
+          <a th:href="@{/portal/tickets}"><span aria-hidden="true">▤</span> My tickets</a>
+          <a th:href="@{/kb}"><span aria-hidden="true">▣</span> Knowledge base</a>
+        </div>
+
+        <hr/>
+
+        <h2 class="card-title">Knowledge base picks</h2>
+        <div class="empty" th:if="${kb == null or #lists.isEmpty(kb)}">
+          <span class="empty__icon" aria-hidden="true">▣</span>
+          <p class="empty__title">No articles yet</p>
+        </div>
+        <ul class="list-plain" th:unless="${kb == null or #lists.isEmpty(kb)}">
+          <li th:each="a : ${kb}">
+            <a class="grow" th:href="@{/kb/{slug}(slug=${a.slug})}" th:text="${a.title}">Article</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

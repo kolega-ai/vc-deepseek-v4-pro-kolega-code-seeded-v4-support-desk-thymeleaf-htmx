@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Knowledge Base — RelayDesk')}"></head>
+<body th:replace="~{layout :: public(~{::content}, 'Knowledge Base')}">
+  <main th:fragment="content">
+
+    <section class="kb-search-hero">
+      <h1>Knowledge Base</h1>
+      <p>Search articles written by the RelayDesk support team.</p>
+      <form class="searchbox"
+            hx-get="/kb/search"
+            hx-target="#kb-results"
+            hx-trigger="input changed delay:400ms, load"
+            hx-include="[name='q']"
+            hx-swap="innerHTML">
+        <label class="sr-only" for="kb-q">Search the knowledge base</label>
+        <input type="search" id="kb-q" name="q" placeholder="Search articles…"
+               autocomplete="off" th:value="${q}"/>
+      </form>
+    </section>
+
+    <section class="public-main" style="padding-top:0;">
+      <div th:replace="~{fragments :: kbResults(${page}, ${q})}"></div>
+    </section>
+
+  </main>
+</body>
+</html>

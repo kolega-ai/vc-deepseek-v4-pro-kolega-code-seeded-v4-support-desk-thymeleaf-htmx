@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('RelayDesk — Customer support, in sync')}"></head>
+<body th:replace="~{layout :: public(~{::content}, 'RelayDesk')}">
+  <main th:fragment="content">
+
+    <section class="hero">
+      <span class="hero-eyebrow">by Lumina Cloud</span>
+      <h1 class="hero-title">RelayDesk</h1>
+      <p class="hero-tagline">Customer support, in sync. One calm workspace for tickets, SLAs,
+        escalations and knowledge — shared by your team and your customers.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" th:href="@{/login}">Sign in</a>
+        <a class="btn" th:href="@{/kb}">Browse knowledge base</a>
+      </div>
+    </section>
+
+    <section class="feature-grid" aria-label="Features">
+      <div class="feature-card">
+        <span class="feature-card__icon" aria-hidden="true">▤</span>
+        <h3>One shared queue</h3>
+        <p>Tickets from every organisation land in a single, filterable queue with priorities,
+          teams and assignees — no inbox archaeology required.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card__icon" aria-hidden="true">◷</span>
+        <h3>SLAs you can see</h3>
+        <p>Every ticket carries response and resolution deadlines, a live on-track/at-risk/breached
+          status, and a timeline customers can follow too.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card__icon" aria-hidden="true">▣</span>
+        <h3>Answers that scale</h3>
+        <p>A knowledge base your customers can search, and your agents can write — published
+          when ready, reviewed by team leads.</p>
+      </div>
+    </section>
+
+    <section class="public-main" style="padding-top:1.2rem;">
+      <div class="row-between">
+        <h2>Latest from the knowledge base</h2>
+        <a th:href="@{/kb}">Browse all articles ›</a>
+      </div>
+      <div class="card">
+        <div th:if="${kb == null or #lists.isEmpty(kb)}" class="empty">
+          <span class="empty__icon" aria-hidden="true">▣</span>
+          <p class="empty__title">No articles published yet</p>
+          <p class="empty__hint">Check back soon.</p>
+        </div>
+        <ul class="list-plain" th:unless="${kb == null or #lists.isEmpty(kb)}">
+          <li th:each="a : ${kb}">
+            <span class="grow">
+              <a th:href="@{/kb/{slug}(slug=${a.slug})}" th:text="${a.title}">Article title</a>
+            </span>
+            <span class="mono small muted"
+                  th:text="${a.publishedAt != null ? #temporals.format(a.publishedAt, 'yyyy-MM-dd') : ''}">—</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>

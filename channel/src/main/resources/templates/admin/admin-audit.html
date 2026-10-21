@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Audit Log — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Audit Log', 'audit', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Audit Log</h1>
+        <p class="page-sub">Append-only record of every privileged action.</p>
+      </div>
+      <a class="btn" th:href="@{/admin/exports/audit}">⬇ Export CSV</a>
+    </div>
+
+    <form class="filter-bar" th:action="@{/admin/audit}" method="get"
+          hx-get="/admin/audit/fragment"
+          hx-target="#audit-rows"
+          hx-trigger="submit, change delay:200ms from:select, change from:input[type=checkbox]"
+          hx-swap="outerHTML">
+      <div class="field field--q">
+        <label class="field-label" for="a-actor">Actor email</label>
+        <input type="search" id="a-actor" name="actorEmail" placeholder="who@example.com" th:value="${filter?.actorEmail}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="a-action">Action</label>
+        <input type="search" id="a-action" name="action" placeholder="e.g. TICKET_CREATED" th:value="${filter?.action}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="a-type">Resource type</label>
+        <input type="search" id="a-type" name="resourceType" placeholder="e.g. TICKET" th:value="${filter?.resourceType}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="a-ref">Resource ref</label>
+        <input type="search" id="a-ref" name="resourceRef" placeholder="e.g. TCK-1000" th:value="${filter?.resourceRef}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="a-from">From</label>
+        <input type="date" id="a-from" name="from" th:value="${filter?.from}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="a-to">To</label>
+        <input type="date" id="a-to" name="to" th:value="${filter?.to}"/>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        <a class="btn btn-ghost btn-sm" th:href="@{/admin/audit}">Clear</a>
+      </div>
+    </form>
+
+    <div th:replace="~{fragments :: auditRows(${page}, ${filter})}"></div>
+
+  </main>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Knowledge Base — RelayDesk Desk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Knowledge Base', 'kb-staff', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Knowledge Base</h1>
+        <p class="page-sub">Drafts, reviews and published articles — everything in one place.</p>
+      </div>
+      <a class="btn btn-primary" th:href="@{/desk/kb/new}">✚ New article</a>
+    </div>
+
+    <form class="filter-bar" th:action="@{/desk/kb}" method="get"
+          hx-get="/desk/kb/fragment"
+          hx-target="#kb-rows"
+          hx-trigger="submit, change delay:200ms from:select, change from:input[type=checkbox]"
+          hx-swap="outerHTML">
+      <div class="field">
+        <label class="field-label" for="kb-status">Status</label>
+        <select id="kb-status" name="status">
+          <option value="" th:selected="${filter == null or filter.status == null}">All statuses</option>
+          <option value="DRAFT" th:selected="${filter != null and filter.status != null and filter.status.name() == 'DRAFT'}">Draft</option>
+          <option value="IN_REVIEW" th:selected="${filter != null and filter.status != null and filter.status.name() == 'IN_REVIEW'}">In review</option>
+          <option value="PUBLISHED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'PUBLISHED'}">Published</option>
+          <option value="ARCHIVED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'ARCHIVED'}">Archived</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="kb-author">Author</label>
+        <select id="kb-author" name="authorId">
+          <option value="" th:selected="${filter == null or filter.authorId == null}">All authors</option>
+          <option th:each="a : ${authors != null ? authors : {}}" th:value="${a.id}" th:text="${a.displayName}"
+                  th:selected="${filter != null and filter.authorId != null and filter.authorId.toString() == a.id.toString()}">Author</option>
+        </select>
+      </div>
+      <div class="field field--q">
+        <label class="field-label" for="kb-q">Search</label>
+        <input type="search" id="kb-q" name="q" placeholder="Title, body or tags…" th:value="${filter?.q}"/>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        <a class="btn btn-ghost btn-sm" th:href="@{/desk/kb}">Clear</a>
+      </div>
+    </form>
+
+    <div th:replace="~{fragments :: kbRows(${page}, ${filter})}"></div>
+
+  </main>
+</body>
+</html>

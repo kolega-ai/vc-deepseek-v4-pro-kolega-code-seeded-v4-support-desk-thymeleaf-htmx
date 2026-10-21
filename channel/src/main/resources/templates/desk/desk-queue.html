@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Ticket Queue — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Ticket Queue', 'queue', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Ticket Queue</h1>
+        <p class="page-sub">All tickets your team can see, with live SLA status.</p>
+      </div>
+    </div>
+
+    <form class="filter-bar" th:action="@{/desk/queue}" method="get"
+          hx-get="/desk/queue/fragment"
+          hx-target="#queue-table"
+          hx-trigger="submit, change delay:200ms from:select, change from:input[type=checkbox]"
+          hx-swap="outerHTML">
+      <div class="field">
+        <label class="field-label" for="q-status">Status</label>
+        <select id="q-status" name="status">
+          <option value="" th:selected="${filter == null or filter.status == null}">All statuses</option>
+          <option value="NEW" th:selected="${filter != null and filter.status != null and filter.status.name() == 'NEW'}">New</option>
+          <option value="OPEN" th:selected="${filter != null and filter.status != null and filter.status.name() == 'OPEN'}">Open</option>
+          <option value="PENDING_CUSTOMER" th:selected="${filter != null and filter.status != null and filter.status.name() == 'PENDING_CUSTOMER'}">Awaiting customer</option>
+          <option value="PENDING_INTERNAL" th:selected="${filter != null and filter.status != null and filter.status.name() == 'PENDING_INTERNAL'}">Awaiting internal</option>
+          <option value="ESCALATED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'ESCALATED'}">Escalated</option>
+          <option value="RESOLVED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'RESOLVED'}">Resolved</option>
+          <option value="CLOSED" th:selected="${filter != null and filter.status != null and filter.status.name() == 'CLOSED'}">Closed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="q-priority">Priority</label>
+        <select id="q-priority" name="priority">
+          <option value="" th:selected="${filter == null or filter.priority == null}">Any priority</option>
+          <option value="LOW" th:selected="${filter != null and filter.priority != null and filter.priority.name() == 'LOW'}">Low</option>
+          <option value="MEDIUM" th:selected="${filter != null and filter.priority != null and filter.priority.name() == 'MEDIUM'}">Medium</option>
+          <option value="HIGH" th:selected="${filter != null and filter.priority != null and filter.priority.name() == 'HIGH'}">High</option>
+          <option value="URGENT" th:selected="${filter != null and filter.priority != null and filter.priority.name() == 'URGENT'}">Urgent</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="q-category">Category</label>
+        <select id="q-category" name="categoryId">
+          <option value="" th:selected="${filter == null or filter.categoryId == null}">All categories</option>
+          <option th:each="c : ${categories != null ? categories : {}}" th:value="${c.id}" th:text="${c.name}"
+                  th:selected="${filter != null and filter.categoryId != null and filter.categoryId.toString() == c.id.toString()}">Category</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="q-team">Team</label>
+        <select id="q-team" name="teamId">
+          <option value="" th:selected="${filter == null or filter.teamId == null}">All teams</option>
+          <option th:each="t : ${teams != null ? teams : {}}" th:value="${t.id}" th:text="${t.name}"
+                  th:selected="${filter != null and filter.teamId != null and filter.teamId.toString() == t.id.toString()}">Team</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="q-assignee">Assignee</label>
+        <select id="q-assignee" name="assignee">
+          <option value="any" th:selected="${filter == null or filter.assignee == null or filter.assignee == 'any'}">Anyone</option>
+          <option value="mine" th:selected="${filter != null and filter.assignee == 'mine'}">Mine</option>
+          <option value="unassigned" th:selected="${filter != null and filter.assignee == 'unassigned'}">Unassigned</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="q-sort">Sort</label>
+        <select id="q-sort" name="sort">
+          <option value="created" th:selected="${filter == null or filter.sort == null or filter.sort == 'created'}">Created</option>
+          <option value="updated" th:selected="${filter != null and filter.sort == 'updated'}">Updated</option>
+          <option value="priority" th:selected="${filter != null and filter.sort == 'priority'}">Priority</option>
+          <option value="sla" th:selected="${filter != null and filter.sort == 'sla'}">SLA deadline</option>
+          <option value="subject" th:selected="${filter != null and filter.sort == 'subject'}">Subject</option>
+        </select>
+      </div>
+      <div class="field field--q">
+        <label class="field-label" for="q-text">Search</label>
+        <input type="search" id="q-text" name="q" placeholder="Subject, ref or org…" th:value="${filter?.q}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="q-from">From</label>
+        <input type="date" id="q-from" name="from" th:value="${filter?.from}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="q-to">To</label>
+        <input type="date" id="q-to" name="to" th:value="${filter?.to}"/>
+      </div>
+      <div class="field field--check">
+        <label class="check-line">
+          <input type="checkbox" name="overdueOnly" value="true" th:checked="${filter != null and filter.overdueOnly}"/>
+          <span>Overdue only</span>
+        </label>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        <a class="btn btn-ghost btn-sm" th:href="@{/desk/queue}">Clear</a>
+      </div>
+    </form>
+
+    <form class="view-save" th:action="@{/desk/queue/view}" method="post">
+      <input type="hidden" name="status" th:value="${filter?.status}"/>
+      <input type="hidden" name="priority" th:value="${filter?.priority}"/>
+      <input type="hidden" name="categoryId" th:value="${filter?.categoryId}"/>
+      <input type="hidden" name="teamId" th:value="${filter?.teamId}"/>
+      <input type="hidden" name="assignee" th:value="${filter?.assignee}"/>
+      <input type="hidden" name="sort" th:value="${filter?.sort}"/>
+      <input type="hidden" name="q" th:value="${filter?.q}"/>
+      <input type="hidden" name="from" th:value="${filter?.from}"/>
+      <input type="hidden" name="to" th:value="${filter?.to}"/>
+      <input type="hidden" name="overdueOnly" th:value="${filter != null and filter.overdueOnly} ? 'true' : ''"/>
+      <button type="submit" class="btn btn-ghost btn-sm">Save view as default</button>
+    </form>
+
+    <div th:replace="~{fragments :: queueTable(${page}, ${filter})}"></div>
+
+  </main>
+</body>
+</html>

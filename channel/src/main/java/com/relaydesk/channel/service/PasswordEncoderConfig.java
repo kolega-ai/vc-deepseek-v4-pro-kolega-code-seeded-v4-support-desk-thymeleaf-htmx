@@ -1,0 +1,15 @@
+package com.relaydesk.channel.service;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+/** Password hashing: BCrypt strength 12 (per the design contract). */
+@Configuration
+public class PasswordEncoderConfig {
+
+    @Bean
+    public BCryptPasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Profile — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Profile', 'profile', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Profile</h1>
+        <p class="page-sub">Update your display name, or change your password.</p>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:640px;">
+      <form th:action="@{/portal/profile}" method="post">
+        <div class="field">
+          <label class="field-label req" for="displayName">Display name</label>
+          <input type="text" id="displayName" name="displayName" required maxlength="120"
+                 th:value="${form?.displayName}"/>
+        </div>
+
+        <hr/>
+
+        <h2 class="card-title">Change password <span class="muted small">(optional)</span></h2>
+        <div class="form-grid">
+          <div class="field">
+            <label class="field-label" for="currentPassword">Current password</label>
+            <input type="password" id="currentPassword" name="currentPassword" autocomplete="current-password" maxlength="100"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="newPassword">New password</label>
+            <input type="password" id="newPassword" name="newPassword" autocomplete="new-password" minlength="10" maxlength="100"/>
+            <p class="field-hint">Leave both password fields empty to keep your current password.</p>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save profile</button>
+        </div>
+      </form>
+
+      <hr/>
+
+      <h2 class="card-title">Call-back pin</h2>
+      <p class="field-hint">The phone support team asks for this pin before helping with your tickets.</p>
+      <form th:action="@{/portal/profile/callback-pin}" method="get" class="row" style="gap:0.4rem;">
+        <input type="text" name="pin" placeholder="e.g. 4821" minlength="4" maxlength="12"
+               style="width:auto; min-width:200px;"/>
+        <button type="submit" class="btn">Save pin</button>
+      </form>
+    </div>
+
+  </main>
+</body>
+</html>

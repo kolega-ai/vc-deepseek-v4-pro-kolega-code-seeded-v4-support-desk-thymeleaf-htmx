@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Customer Directory — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Customer Directory', 'orgs', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Customer Directory</h1>
+        <p class="page-sub">Organisations live in the external customer core (CRM).</p>
+      </div>
+    </div>
+
+    <form class="filter-bar" th:action="@{/admin/orgs}" method="get">
+      <div class="field field--q">
+        <label class="field-label" for="org-q">Search</label>
+        <input type="search" id="org-q" name="q" placeholder="Organisation name…" th:value="${q}"/>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        <a class="btn btn-ghost btn-sm" th:href="@{/admin/orgs}">Clear</a>
+      </div>
+    </form>
+
+    <div class="card">
+      <div class="empty" th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+        <span class="empty__icon" aria-hidden="true">⌂</span>
+        <p class="empty__title">No organisations found</p>
+      </div>
+
+      <div class="table-wrap" th:unless="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+        <table class="table">
+          <thead>
+            <tr><th>Name</th><th>Slug</th><th>Plan</th><th>Status</th><th>Contacts</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="o : ${page.content}">
+              <td class="cell-main" th:text="${o.name}">Org</td>
+              <td class="mono" th:text="${o.slug}">slug</td>
+              <td>
+                <span class="badge badge--violet" th:if="${o.plan != null and o.plan == 'Enterprise'}"><span class="badge-dot" aria-hidden="true"></span>Enterprise</span>
+                <span class="badge badge--blue" th:if="${o.plan != null and o.plan == 'Growth'}"><span class="badge-dot" aria-hidden="true"></span>Growth</span>
+                <span class="badge badge--gray" th:if="${o.plan != null and o.plan == 'Starter'}"><span class="badge-dot" aria-hidden="true"></span>Starter</span>
+                <span class="badge badge--gray" th:if="${o.plan == null or (o.plan != 'Enterprise' and o.plan != 'Growth' and o.plan != 'Starter')}"><span class="badge-dot" aria-hidden="true"></span><span th:text="${o.plan}">?</span></span>
+              </td>
+              <td>
+                <span class="badge badge--green" th:if="${o.status != null and o.status == 'ACTIVE'}"><span class="badge-dot" aria-hidden="true"></span>Active</span>
+                <span class="badge badge--red" th:if="${o.status != null and o.status == 'SUSPENDED'}"><span class="badge-dot" aria-hidden="true"></span>Suspended</span>
+                <span class="badge badge--gray" th:if="${o.status == null or (o.status != 'ACTIVE' and o.status != 'SUSPENDED')}"><span class="badge-dot" aria-hidden="true"></span><span th:text="${o.status}">?</span></span>
+              </td>
+              <td class="num" th:text="${o.contactCount}">0</td>
+              <td><a class="btn btn-sm" th:href="@{/admin/orgs/{id}(id=${o.id})}">Open</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <th:block th:replace="~{fragments :: pagination(${page}, '/admin/orgs', ${q != null and !q.isEmpty()} ? ('&q=' + ${q}) : '')}"></th:block>
+    </div>
+
+    <div class="card" style="max-width:560px; margin-top:1.1rem;">
+      <h2 class="card-title">Create organisation</h2>
+      <form th:action="@{/admin/orgs}" method="post">
+        <div class="field">
+          <label class="field-label req" for="o-name">Name</label>
+          <input type="text" id="o-name" name="name" required maxlength="200"/>
+        </div>
+        <div class="field">
+          <label class="field-label" for="o-plan">Plan</label>
+          <select id="o-plan" name="plan">
+            <option value="Starter">Starter</option>
+            <option value="Growth">Growth</option>
+            <option value="Enterprise">Enterprise</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="o-address">Address</label>
+          <input type="text" id="o-address" name="address" maxlength="500"/>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create organisation</button>
+        </div>
+      </form>
+    </div>
+
+  </main>
+</body>
+</html>

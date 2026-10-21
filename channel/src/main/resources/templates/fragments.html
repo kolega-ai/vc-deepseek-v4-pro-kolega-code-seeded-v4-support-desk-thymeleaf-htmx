@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<!--
+  RelayDesk shared fragments — all rendered with default escaping (no th:utext).
+  Dates via #temporals.format(..., 'yyyy-MM-dd HH:mm').
+
+  Badges:  statusBadge(status) / priorityBadge(priority) / slaBadge(slaStatus, overdue)
+           kbStatusBadge(status, internalOnly) / escalationStatusBadge(status)
+  Lists:   queueTable(page, filter) / portalTicketRows(page, filter) / escalationRows(page, filter)
+           userRows(page, filter) / auditRows(page, filter) / kbResults(page, q) / kbRows(page, filter)
+           webhookAttempts(attempts) / notificationList(page, unread) / timeline(detail)
+  Shared:  emptyState(icon, title, hint, ctaHref, ctaLabel) / pagination(page, baseUrl, extraQuery)
+           toastContainer
+-->
+
+<!-- ============================== Badges ============================== -->
+
+<span th:fragment="statusBadge(status)" th:switch="${status != null ? #strings.toString(status) : 'UNKNOWN'}">
+  <span th:case="NEW" class="badge badge--blue"><span class="badge-dot" aria-hidden="true"></span>New</span>
+  <span th:case="OPEN" class="badge badge--teal"><span class="badge-dot" aria-hidden="true"></span>Open</span>
+  <span th:case="PENDING_CUSTOMER" class="badge badge--amber"><span class="badge-dot" aria-hidden="true"></span>Awaiting customer</span>
+  <span th:case="PENDING_INTERNAL" class="badge badge--violet"><span class="badge-dot" aria-hidden="true"></span>Awaiting internal</span>
+  <span th:case="ESCALATED" class="badge badge--red"><span class="badge-dot" aria-hidden="true"></span>Escalated</span>
+  <span th:case="RESOLVED" class="badge badge--green"><span class="badge-dot" aria-hidden="true"></span>Resolved</span>
+  <span th:case="CLOSED" class="badge badge--gray"><span class="badge-dot" aria-hidden="true"></span>Closed</span>
+  <span th:case="*" class="badge badge--gray"><span class="badge-dot" aria-hidden="true"></span><th:block th:text="${status}">?</th:block></span>
+</span>
+
+<span th:fragment="priorityBadge(priority)" th:switch="${priority != null ? #strings.toString(priority) : 'UNKNOWN'}">
+  <span th:case="LOW" class="badge badge--gray"><span class="badge-glyph" aria-hidden="true">↓</span>Low</span>
+  <span th:case="MEDIUM" class="badge badge--blue"><span class="badge-glyph" aria-hidden="true">→</span>Medium</span>
+  <span th:case="HIGH" class="badge badge--amber"><span class="badge-glyph" aria-hidden="true">↑</span>High</span>
+  <span th:case="URGENT" class="badge badge--red"><span class="badge-glyph" aria-hidden="true">!!</span>Urgent</span>
+  <span th:case="*" class="badge badge--gray"><span class="badge-glyph" aria-hidden="true">•</span><th:block th:text="${priority}">?</th:block></span>
+</span>
+
+<span th:fragment="slaBadge(slaStatus, overdue)" th:switch="${overdue} ? 'OVERDUE' : (${slaStatus != null ? #strings.toString(slaStatus) : 'UNKNOWN'})">
+  <span th:case="OVERDUE" class="badge badge--red"><span class="badge-dot" aria-hidden="true"></span>Overdue</span>
+  <span th:case="ON_TRACK" class="badge badge--green"><span class="badge-dot" aria-hidden="true"></span>On track</span>
+  <span th:case="AT_RISK" class="badge badge--amber"><span class="badge-dot" aria-hidden="true"></span>At risk</span>
+  <span th:case="BREACHED" class="badge badge--red"><span class="badge-dot" aria-hidden="true"></span>Breached</span>
+  <span th:case="*" class="badge badge--gray"><span class="badge-dot" aria-hidden="true"></span><th:block th:text="${slaStatus}">?</th:block></span>
+</span>
+
+<span th:fragment="kbStatusBadge(status, internalOnly)" th:switch="${status != null ? #strings.toString(status) : 'UNKNOWN'}">
+  <span th:case="DRAFT" class="badge badge--gray"><span class="badge-dot" aria-hidden="true"></span>Draft</span>
+  <span th:case="IN_REVIEW" class="badge badge--blue"><span class="badge-dot" aria-hidden="true"></span>In review</span>
+  <span th:case="PUBLISHED" class="badge badge--green"><span class="badge-dot" aria-hidden="true"></span>Published</span>
+  <span th:case="ARCHIVED" class="badge badge--gray"><span class="badge-dot" aria-hidden="true"></span>Archived</span>
+  <span th:case="*" class="badge badge--gray"><span class="badge-dot" aria-hidden="true"></span><th:block th:text="${status}">?</th:block></span>
+  <span th:if="${internalOnly}" class="chip chip--violet">Internal</span>
+</span>
+
+<span th:fragment="escalationStatusBadge(status)" th:switch="${status != null ? #strings.toString(status) : 'UNKNOWN'}">
+  <span th:case="REQUESTED" class="badge badge--amber"><span class="badge-dot" aria-hidden="true"></span>Requested</span>
+  <span th:case="ACCEPTED" class="badge badge--blue"><span class="badge-dot" aria-hidden="true"></span>Accepted</span>
+  <span th:case="IN_REVIEW" class="badge badge--violet"><span class="badge-dot" aria-hidden="true"></span>In review</span>
+  <span th:case="RESOLVED" class="badge badge--green"><span class="badge-dot" aria-hidden="true"></span>Resolved</span>
+  <span th:case="REJECTED" class="badge badge--red"><span class="badge-dot" aria-hidden="true"></span>Rejected</span>
+  <span th:case="*" class="badge badge--gray"><span class="badge-dot" aria-hidden="true"></span><th:block th:text="${status}">?</th:block></span>
+</span>
+
+<!-- ============================== Empty state ============================== -->
+
+<div th:fragment="emptyState(icon, title, hint, ctaHref, ctaLabel)" class="empty">
+  <span class="empty__icon" aria-hidden="true" th:text="${icon}">📭</span>
+  <p class="empty__title" th:text="${title}">Nothing here yet</p>
+  <p class="empty__hint" th:text="${hint}">Try adjusting your filters.</p>
+  <a class="btn btn-primary" th:if="${ctaHref != null}" th:href="${ctaHref}" th:text="${ctaLabel}">Get started</a>
+</div>
+
+<!-- ============================== Pagination ============================== -->
+
+<nav th:fragment="pagination(page, baseUrl, extraQuery)"
+     class="pagination"
+     th:if="${page != null and page.totalPages > 1}"
+     aria-label="Pagination"
+     th:with="cur=${page.number + 1}, total=${page.totalPages},
+              qs=${extraQuery != null and !extraQuery.isEmpty()} ? ${extraQuery} : ''">
+  <a class="pagination-ctl" th:if="${page.hasPrevious()}"
+     th:href="@{${baseUrl}(page=${page.number - 1})} + ${qs}" rel="prev">‹ Prev</a>
+  <span class="pagination-ctl is-disabled" th:unless="${page.hasPrevious()}" aria-disabled="true">‹ Prev</span>
+
+  <th:block th:with="start=${total > 5} ? (${cur > 3} ? (${cur > total - 2} ? ${total - 4} : ${cur - 2}) : 1) : 1,
+                     end=${total > 5} ? ${start + 4} : ${total}">
+    <a th:each="p : ${#numbers.sequence(start, end)}"
+       class="pagination-page"
+       th:classappend="${p == cur} ? 'is-active'"
+       th:attr="aria-current=${p == cur} ? 'page' : null"
+       th:text="${p}"
+       th:href="@{${baseUrl}(page=${p - 1})} + ${qs}">1</a>
+  </th:block>
+
+  <a class="pagination-ctl" th:if="${page.hasNext()}"
+     th:href="@{${baseUrl}(page=${page.number + 1})} + ${qs}" rel="next">Next ›</a>
+  <span class="pagination-ctl is-disabled" th:unless="${page.hasNext()}" aria-disabled="true">Next ›</span>
+
+  <span class="pagination-meta" th:text="'Page ' + ${cur} + ' of ' + ${total} + ' · ' + ${page.totalElements} + ' results'">Page 1 of 1</span>
+</nav>
+
+<!-- ============================== Agent queue ============================== -->
+
+<div th:fragment="queueTable(page, filter)" id="queue-table" class="queue-table"
+     th:with="tq=${(filter != null and filter.status != null ? '&status=' + filter.status.name() : '') + (filter != null and filter.priority != null ? '&priority=' + filter.priority.name() : '') + (filter != null and filter.categoryId != null ? '&categoryId=' + filter.categoryId : '') + (filter != null and filter.teamId != null ? '&teamId=' + filter.teamId : '') + (filter != null and filter.queueId != null ? '&queueId=' + filter.queueId : '') + (filter != null and filter.assignee != null and filter.assignee != 'any' ? '&assignee=' + filter.assignee : '') + (filter != null and filter.overdueOnly ? '&overdueOnly=true' : '') + (filter != null and filter.from != null ? '&from=' + filter.from : '') + (filter != null and filter.to != null ? '&to=' + filter.to : '') + (filter != null and filter.q != null ? '&q=' + filter.q : '') + (filter != null and filter.sort != null and filter.sort != 'created' ? '&sort=' + filter.sort : '')}">
+  <div class="table-wrap" th:if="${page != null and page.content != null and !#lists.isEmpty(page.content)}">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ref</th>
+          <th>Subject</th>
+          <th>Org</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>SLA</th>
+          <th>Team</th>
+          <th>Assignee</th>
+          <th>Created</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="t : ${page.content}" class="row-clickable">
+          <td class="cell-slim">
+            <a class="row-link mono" th:href="@{/desk/tickets/{id}(id=${t.id})}" th:text="${t.ref}">TCK-1000</a>
+          </td>
+          <td class="cell-main truncate" th:text="${t.subject}">Subject</td>
+          <td class="truncate" th:text="${t.orgName}">Org</td>
+          <td class="truncate" th:text="${t.categoryName}">Category</td>
+          <td><th:block th:replace="~{fragments :: priorityBadge(${t.priority})}">priority</th:block></td>
+          <td><th:block th:replace="~{fragments :: statusBadge(${t.status})}">status</th:block></td>
+          <td><th:block th:replace="~{fragments :: slaBadge(${t.slaStatus}, ${t.overdue})}">sla</th:block></td>
+          <td class="truncate" th:text="${t.teamName != null} ? ${t.teamName} : '—'">—</td>
+          <td class="truncate" th:text="${t.assigneeName != null} ? ${t.assigneeName} : 'Unassigned'">Unassigned</td>
+          <td class="cell-slim mono" th:text="${t.createdAt != null ? #temporals.format(t.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+          <td class="cell-slim mono" th:text="${t.updatedAt != null ? #temporals.format(t.updatedAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <th:block th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <div th:replace="~{fragments :: emptyState('🔍', 'No tickets match', 'Try widening the filters or clearing the search.', null, null)}"></div>
+  </th:block>
+
+  <th:block th:replace="~{fragments :: pagination(${page}, '/desk/queue', ${tq})}"></th:block>
+</div>
+
+<!-- ============================== Customer portal ticket rows ============================== -->
+
+<div th:fragment="portalTicketRows(page, filter)" id="portal-ticket-rows"
+     th:with="tq=${(filter != null and filter.status != null ? '&status=' + filter.status.name() : '') + (filter != null and filter.priority != null ? '&priority=' + filter.priority.name() : '') + (filter != null and filter.categoryId != null ? '&categoryId=' + filter.categoryId : '') + (filter != null and filter.teamId != null ? '&teamId=' + filter.teamId : '') + (filter != null and filter.queueId != null ? '&queueId=' + filter.queueId : '') + (filter != null and filter.assignee != null and filter.assignee != 'any' ? '&assignee=' + filter.assignee : '') + (filter != null and filter.overdueOnly ? '&overdueOnly=true' : '') + (filter != null and filter.from != null ? '&from=' + filter.from : '') + (filter != null and filter.to != null ? '&to=' + filter.to : '') + (filter != null and filter.q != null ? '&q=' + filter.q : '') + (filter != null and filter.sort != null and filter.sort != 'created' ? '&sort=' + filter.sort : '')}">
+  <div class="table-wrap" th:if="${page != null and page.content != null and !#lists.isEmpty(page.content)}">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ref</th>
+          <th>Subject</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="t : ${page.content}" class="row-clickable">
+          <td class="cell-slim">
+            <a class="row-link mono" th:href="@{/portal/tickets/{id}(id=${t.id})}" th:text="${t.ref}">TCK-1000</a>
+          </td>
+          <td class="cell-main truncate" th:text="${t.subject}">Subject</td>
+          <td class="truncate" th:text="${t.categoryName}">Category</td>
+          <td><th:block th:replace="~{fragments :: priorityBadge(${t.priority})}">priority</th:block></td>
+          <td><th:block th:replace="~{fragments :: statusBadge(${t.status})}">status</th:block></td>
+          <td class="cell-slim mono" th:text="${t.updatedAt != null ? #temporals.format(t.updatedAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <th:block th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <div th:replace="~{fragments :: emptyState('📭', 'No tickets yet', 'When you create a ticket it will show up here.', @{/portal/tickets/new}, 'New ticket')}"></div>
+  </th:block>
+
+  <th:block th:replace="~{fragments :: pagination(${page}, '/portal/tickets', ${tq})}"></th:block>
+</div>
+
+<!-- ============================== SLA / status timeline ============================== -->
+
+<div th:fragment="timeline(detail)">
+  <div class="empty" th:if="${detail == null or detail.slaTimeline == null or #lists.isEmpty(detail.slaTimeline)}">
+    <span class="empty__icon" aria-hidden="true">🕑</span>
+    <p class="empty__title">No SLA milestones yet</p>
+    <p class="empty__hint">Milestones appear as the ticket moves through its SLA lifecycle.</p>
+  </div>
+  <ol class="timeline-list" th:unless="${detail == null or detail.slaTimeline == null or #lists.isEmpty(detail.slaTimeline)}">
+    <li th:each="m : ${detail.slaTimeline}" class="timeline-item"
+        th:classappend="${#strings.contains(m.state, 'met') or #strings.contains(m.state, 'on_track')} ? 'is-met' : (${#strings.contains(m.state, 'risk')} ? 'is-risk' : (${#strings.contains(m.state, 'missed') or #strings.contains(m.state, 'breach')} ? 'is-missed' : ''))">
+      <span class="timeline-dot" aria-hidden="true"></span>
+      <span class="timeline-label" th:text="${m.label}">Created</span>
+      <time class="timeline-time" th:text="${m.at != null ? #temporals.format(m.at, 'yyyy-MM-dd HH:mm') : '—'}">—</time>
+      <span class="chip chip--neutral" th:text="${m.state}">on_track</span>
+    </li>
+  </ol>
+</div>
+
+<!-- ============================== Escalation queue rows ============================== -->
+
+<div th:fragment="escalationRows(page, filter)" id="escalation-rows"
+     th:with="tq=${(filter != null and filter.status != null ? '&status=' + filter.status.name() : '') + (filter != null and filter.teamId != null ? '&teamId=' + filter.teamId : '') + (filter != null and filter.q != null ? '&q=' + filter.q : '') + (filter != null and filter.from != null ? '&from=' + filter.from : '') + (filter != null and filter.to != null ? '&to=' + filter.to : '')}">
+  <div class="table-wrap" th:if="${page != null and page.content != null and !#lists.isEmpty(page.content)}">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ticket</th>
+          <th>Subject</th>
+          <th>Team</th>
+          <th>Requester</th>
+          <th>Assignee</th>
+          <th>Status</th>
+          <th>SLA</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="e : ${page.content}" class="row-clickable">
+          <td class="cell-slim">
+            <a class="row-link mono" th:href="@{/desk/escalations/{id}(id=${e.id})}" th:text="${e.ticketRef}">TCK-1000</a>
+          </td>
+          <td class="cell-main truncate" th:text="${e.ticketSubject}">Subject</td>
+          <td class="truncate" th:text="${e.teamName != null} ? ${e.teamName} : '—'">—</td>
+          <td class="truncate" th:text="${e.requesterName != null} ? ${e.requesterName} : '—'">—</td>
+          <td class="truncate" th:text="${e.assigneeName != null} ? ${e.assigneeName} : 'Unassigned'">Unassigned</td>
+          <td><th:block th:replace="~{fragments :: escalationStatusBadge(${e.status})}">status</th:block></td>
+          <td><span class="chip chip--warn" th:if="${e.slaException}">SLA exception</span><span class="muted" th:unless="${e.slaException}">—</span></td>
+          <td class="cell-slim mono" th:text="${e.createdAt != null ? #temporals.format(e.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <th:block th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <div th:replace="~{fragments :: emptyState('⚑', 'No escalations match', 'Escalations needing a team lead appear here.', null, null)}"></div>
+  </th:block>
+
+  <th:block th:replace="~{fragments :: pagination(${page}, '/desk/escalations', ${tq})}"></th:block>
+</div>
+
+<!-- ============================== Admin user rows ============================== -->
+
+<div th:fragment="userRows(page, filter)" id="user-rows"
+     th:with="tq=${(filter != null and filter.q != null ? '&q=' + filter.q : '') + (filter != null and filter.role != null ? '&role=' + filter.role.name() : '') + (filter != null and filter.enabledOnly ? '&enabledOnly=true' : '')}">
+  <div class="table-wrap" th:if="${page != null and page.content != null and !#lists.isEmpty(page.content)}">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Display name</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Teams / Org</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="u : ${page.content}">
+          <td class="cell-main mono" th:text="${u.email}">user@example.com</td>
+          <td th:text="${u.displayName}">Name</td>
+          <td>
+            <form th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post" class="inline-edit">
+              <select name="role" data-autosubmit aria-label="Role for user">
+                <option value="SUPPORT_ADMIN" th:selected="${u.role != null and u.role.name() == 'SUPPORT_ADMIN'}">Support admin</option>
+                <option value="TEAM_LEAD" th:selected="${u.role != null and u.role.name() == 'TEAM_LEAD'}">Team lead</option>
+                <option value="SUPPORT_AGENT" th:selected="${u.role != null and u.role.name() == 'SUPPORT_AGENT'}">Support agent</option>
+                <option value="CUSTOMER_USER" th:selected="${u.role != null and u.role.name() == 'CUSTOMER_USER'}">Customer</option>
+              </select>
+            </form>
+          </td>
+          <td>
+            <span class="badge badge--green" th:if="${u.enabled}"><span class="badge-dot" aria-hidden="true"></span>Enabled</span>
+            <span class="badge badge--gray" th:unless="${u.enabled}"><span class="badge-dot" aria-hidden="true"></span>Disabled</span>
+          </td>
+          <td>
+            <span class="truncate" th:text="${u.teamNames != null and !u.teamNames.isEmpty()} ? ${u.teamNames} : (${u.orgName != null and !u.orgName.isEmpty()} ? ${u.orgName} : '—')">—</span>
+          </td>
+          <td class="cell-slim mono" th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+          <td class="cell-slim">
+            <form th:action="@{/admin/users/{id}/enabled(id=${u.id})}" method="post" class="inline-edit">
+              <input type="hidden" name="enabled" th:value="${u.enabled} ? 'false' : 'true'"/>
+              <button type="submit" class="btn btn-sm" th:if="${u.enabled}" data-confirm="Disable this user? Their sessions stop working immediately.">Disable</button>
+              <button type="submit" class="btn btn-sm btn-primary" th:unless="${u.enabled}">Enable</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <th:block th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <div th:replace="~{fragments :: emptyState('♟', 'No users match', 'Try a different search or role filter.', null, null)}"></div>
+  </th:block>
+
+  <th:block th:replace="~{fragments :: pagination(${page}, '/admin/users', ${tq})}"></th:block>
+</div>
+
+<!-- ============================== Audit rows ============================== -->
+
+<div th:fragment="auditRows(page, filter)" id="audit-rows"
+     th:with="tq=${(filter != null and filter.actorEmail != null ? '&actorEmail=' + filter.actorEmail : '') + (filter != null and filter.action != null ? '&action=' + filter.action : '') + (filter != null and filter.resourceType != null ? '&resourceType=' + filter.resourceType : '') + (filter != null and filter.resourceRef != null ? '&resourceRef=' + filter.resourceRef : '') + (filter != null and filter.from != null ? '&from=' + filter.from : '') + (filter != null and filter.to != null ? '&to=' + filter.to : '')}">
+  <div class="table-wrap" th:if="${page != null and page.content != null and !#lists.isEmpty(page.content)}">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Actor</th>
+          <th>Action</th>
+          <th>Resource</th>
+          <th>Before → After</th>
+          <th>Authz basis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="r : ${page.content}">
+          <td class="cell-slim mono" th:attr="data-timestamp=${r.occurredAt}"
+              th:text="${r.occurredAt != null ? #temporals.format(r.occurredAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+          <td class="truncate mono" th:text="${r.actorEmail}">actor</td>
+          <td><span class="chip chip--info mono" th:text="${r.action}">action</span></td>
+          <td>
+            <span class="mono small" th:text="${r.resourceType}">TYPE</span>
+            <span class="muted small" th:if="${r.resourceRef != null and !r.resourceRef.isEmpty()}"> · <span class="mono" th:text="${r.resourceRef}">ref</span></span>
+          </td>
+          <td>
+            <span class="truncate mono small muted" th:if="${r.beforeValue != null and !r.beforeValue.isEmpty()}" th:text="${r.beforeValue}">before</span>
+            <span class="muted small" th:if="${r.beforeValue != null and !r.beforeValue.isEmpty() or r.afterValue != null and !r.afterValue.isEmpty()}"> → </span>
+            <span class="truncate mono small" th:if="${r.afterValue != null and !r.afterValue.isEmpty()}" th:text="${r.afterValue}">after</span>
+            <span class="muted small" th:if="${(r.beforeValue == null or r.beforeValue.isEmpty()) and (r.afterValue == null or r.afterValue.isEmpty())}">—</span>
+          </td>
+          <td class="truncate small muted" th:text="${r.authzBasis != null} ? ${r.authzBasis} : '—'">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <th:block th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <div th:replace="~{fragments :: emptyState('≡', 'No audit events match', 'Every privileged action is recorded here.', null, null)}"></div>
+  </th:block>
+
+  <th:block th:replace="~{fragments :: pagination(${page}, '/admin/audit', ${tq})}"></th:block>
+</div>
+
+<!-- ============================== Public KB search results ============================== -->
+
+<div th:fragment="kbResults(page, q)" id="kb-results">
+  <div class="card" th:if="${page != null and page.content != null and !#lists.isEmpty(page.content)}">
+    <div th:each="a : ${page.content}" class="kb-result">
+      <p class="kb-result__title">
+        <a th:href="@{/kb/{slug}(slug=${a.slug})}" th:text="${a.title}">Article title</a>
+      </p>
+      <div class="kb-meta" style="margin-bottom:0;">
+        <span class="chip chip--teal" th:if="${a.categoryName != null}" th:text="${a.categoryName}">Category</span>
+        <span th:text="${a.publishedAt != null ? #temporals.format(a.publishedAt, 'yyyy-MM-dd') : ''}">2026-01-01</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty" th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <span class="empty__icon" aria-hidden="true">🔎</span>
+    <p class="empty__title" th:text="${q != null and !q.isEmpty()} ? 'No results for “' + ${q} + '”' : 'No articles yet'">No results</p>
+    <p class="empty__hint">Try a different search term — we search titles, bodies and tags.</p>
+  </div>
+
+  <th:block th:replace="~{fragments :: pagination(${page}, '/kb', '')}"></th:block>
+</div>
+
+<!-- ============================== Staff KB rows ============================== -->
+
+<div th:fragment="kbRows(page, filter)" id="kb-rows"
+     th:with="tq=${(filter != null and filter.status != null ? '&status=' + filter.status.name() : '') + (filter != null and filter.q != null ? '&q=' + filter.q : '') + (filter != null and filter.authorId != null ? '&authorId=' + filter.authorId : '')}">
+  <div class="table-wrap" th:if="${page != null and page.content != null and !#lists.isEmpty(page.content)}">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Status</th>
+          <th>Author</th>
+          <th>Category</th>
+          <th>Updated</th>
+          <th>Views</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="a : ${page.content}">
+          <td class="cell-main">
+            <a th:href="@{/desk/kb/{id}/edit(id=${a.id})}" th:text="${a.title}">Title</a>
+          </td>
+          <td><th:block th:replace="~{fragments :: kbStatusBadge(${a.status}, ${a.internalOnly})}">status</th:block></td>
+          <td th:text="${a.authorName != null} ? ${a.authorName} : '—'">—</td>
+          <td th:text="${a.categoryName != null} ? ${a.categoryName} : '—'">—</td>
+          <td class="cell-slim mono" th:text="${a.updatedAt != null ? #temporals.format(a.updatedAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+          <td class="cell-slim num" th:text="${a.viewCount}">0</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <th:block th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <div th:replace="~{fragments :: emptyState('▣', 'No articles match', 'Write the first article or widen the filters.', @{/desk/kb/new}, 'New article')}"></div>
+  </th:block>
+
+  <th:block th:replace="~{fragments :: pagination(${page}, '/desk/kb', ${tq})}"></th:block>
+</div>
+
+<!-- ============================== Webhook delivery attempts ============================== -->
+
+<div th:fragment="webhookAttempts(attempts)" id="webhook-attempts"
+     hx-get="/admin/webhooks/fragment"
+     hx-trigger="every 60s"
+     hx-swap="outerHTML">
+  <div class="table-wrap table--mini" th:if="${attempts != null and !#lists.isEmpty(attempts)}">
+    <table class="table table--mini">
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Event</th>
+          <th>Status</th>
+          <th>Code</th>
+          <th>Error</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="a : ${attempts}">
+          <td class="truncate" th:text="${a.endpointName}">Endpoint</td>
+          <td class="mono small" th:text="${a.event}">event</td>
+          <td>
+            <span class="badge badge--green" th:if="${a.status != null and a.status.name() == 'SUCCEEDED'}"><span class="badge-dot" aria-hidden="true"></span>Delivered</span>
+            <span class="badge badge--red" th:if="${a.status != null and a.status.name() == 'FAILED'}"><span class="badge-dot" aria-hidden="true"></span>Failed</span>
+            <span class="badge badge--amber" th:if="${a.status == null or a.status.name() == 'PENDING'}"><span class="badge-dot" aria-hidden="true"></span>Pending</span>
+          </td>
+          <td class="cell-slim mono" th:text="${a.responseCode != null} ? ${a.responseCode} : '—'">—</td>
+          <td class="truncate small muted" th:text="${a.errorMessage != null} ? ${a.errorMessage} : '—'">—</td>
+          <td class="cell-slim mono" th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty" th:if="${attempts == null or #lists.isEmpty(attempts)}">
+    <span class="empty__icon" aria-hidden="true">⌁</span>
+    <p class="empty__title">No delivery attempts yet</p>
+    <p class="empty__hint">Attempts appear after webhook events are dispatched.</p>
+  </div>
+</div>
+
+<!-- ============================== Notification dropdown list ============================== -->
+
+<div th:fragment="notificationList(page, unread)">
+  <div class="notif-head">
+    <strong>Notifications</strong>
+    <span class="notif-unread" th:if="${unread != null and unread > 0}" th:text="${unread} + ' unread'">3 unread</span>
+    <form th:if="${unread != null and unread > 0}">
+      <button type="submit" class="btn btn-sm btn-ghost"
+              hx-post="/notifications/read-all"
+              hx-target="#notification-dropdown"
+              hx-swap="innerHTML">Mark all read</button>
+    </form>
+  </div>
+
+  <div class="empty" th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}" style="margin:0.9rem;padding:1.4rem;">
+    <span class="empty__icon" aria-hidden="true">✓</span>
+    <p class="empty__title">You're all caught up</p>
+  </div>
+
+  <ul class="notif-list" th:unless="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+    <li th:each="n : ${page.content}" class="notif-item" th:classappend="${!n.read} ? 'is-unread'">
+      <a th:if="${n.link != null and !n.link.isEmpty()}" th:href="${n.link}">
+        <span class="notif-icon" aria-hidden="true"
+              th:text="${#strings.contains(n.type, 'escalation')} ? '⚑' : (${#strings.contains(n.type, 'sla')} ? '⏱' : '✉')">✉</span>
+        <span class="grow">
+          <span class="notif-dot" th:if="${!n.read}" aria-hidden="true"></span>
+          <span class="notif-title" th:text="${n.title}">Title</span><br/>
+          <span class="notif-msg" th:text="${n.message}">Message</span><br/>
+          <span class="notif-time" th:text="${n.createdAt != null ? #temporals.format(n.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+        </span>
+      </a>
+      <span th:unless="${n.link != null and !n.link.isEmpty()}" class="notif-body">
+        <span class="notif-icon" aria-hidden="true"
+              th:text="${#strings.contains(n.type, 'escalation')} ? '⚑' : (${#strings.contains(n.type, 'sla')} ? '⏱' : '✉')">✉</span>
+        <span class="grow">
+          <span class="notif-dot" th:if="${!n.read}" aria-hidden="true"></span>
+          <span class="notif-title" th:text="${n.title}">Title</span><br/>
+          <span class="notif-msg" th:text="${n.message}">Message</span><br/>
+          <span class="notif-time" th:text="${n.createdAt != null ? #temporals.format(n.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+        </span>
+      </span>
+    </li>
+  </ul>
+</div>
+
+<!-- ============================== Downstream status ============================== -->
+
+<div th:fragment="downstreamStatus" id="downstream-status">
+  <p class="small mono" th:text="${probeTarget} + ' → ' + ${probeResult}">host → status</p>
+</div>
+
+<!-- ============================== Mention suggestions ============================== -->
+
+<ul th:fragment="mentionSuggestions" class="list-plain" id="mention-suggestions">
+  <li th:each="c : ${contacts}">
+    <span class="grow" th:text="${c.displayName}">Name</span>
+    <span class="mono small" th:text="${c.email}">name@example.test</span>
+  </li>
+  <li th:if="${contacts == null or #lists.isEmpty(contacts)}" class="muted small">No matches</li>
+</ul>
+
+<!-- ============================== Storage attributes ============================== -->
+
+<div th:fragment="storageAttributes" id="storage-attributes">
+  <p class="muted small" th:if="${error != null}" th:text="${error}">no such stored file</p>
+  <ul class="list-plain" th:unless="${error != null}">
+    <li><span class="grow">Stored name</span><span class="mono small" th:text="${storedName}">file</span></li>
+    <li><span class="grow">Size</span><strong th:text="${sizeBytes} + ' bytes'">0 bytes</strong></li>
+    <li><span class="grow">Modified</span><span class="mono small" th:text="${modifiedAt}">—</span></li>
+  </ul>
+</div>
+
+<!-- ============================== Toast container ============================== -->
+
+<div th:fragment="toastContainer" id="toast-container" class="toast-container" aria-live="polite"></div>
+
+</html>

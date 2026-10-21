@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Accept invitation — RelayDesk')}"></head>
+<body th:replace="~{layout :: auth(~{::content}, 'Accept your invitation')}">
+  <div th:fragment="content">
+    <h1>Accept your invitation</h1>
+    <p class="auth-sub">
+      You have been invited to join
+      <strong th:text="${invite?.orgName != null ? invite.orgName : 'an organisation'}">an organisation</strong>
+      as <strong th:text="${invite?.email}">you@example.com</strong>.
+      Choose a password to finish setting up your account.
+    </p>
+
+    <div class="flash flash--error" role="alert" th:if="${error}" th:text="${error}" style="margin-bottom:1rem;">Invitation invalid.</div>
+
+    <!-- Posts to the current URL so the invite token in the path is preserved. -->
+    <form method="post">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <div class="field">
+        <label class="field-label" for="displayName">Display name</label>
+        <input type="text" id="displayName" name="displayName" readonly
+               th:value="${invite?.displayName != null ? invite.displayName : (form?.displayName ?: '')}"/>
+        <p class="field-hint">Your display name is set by the invitation.</p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="orgRef">Organisation</label>
+        <input type="text" id="orgRef" name="orgRef" th:value="${invite?.orgId}"/>
+        <p class="field-hint">Pre-filled from your invitation — change it only if you were
+          invited into the wrong organisation.</p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="new-password"
+               required minlength="10" maxlength="100"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="confirmPassword">Confirm password</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password"
+               required minlength="10" maxlength="100"/>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-block">Create my account</button>
+      </div>
+    </form>
+
+    <div class="auth-foot">
+      <a th:href="@{/login}">‹ Back to sign in</a>
+    </div>
+  </div>
+</body>
+</html>

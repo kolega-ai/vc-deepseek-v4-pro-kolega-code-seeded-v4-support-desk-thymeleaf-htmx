@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('SLA Reports — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'SLA Reports', 'reports', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">SLA Reports</h1>
+        <p class="page-sub">SLA health across teams, with exports for offline analysis.</p>
+      </div>
+    </div>
+
+    <form class="filter-bar" th:action="@{/desk/reports}" method="get">
+      <div class="field">
+        <label class="field-label" for="r-team">Team</label>
+        <select id="r-team" name="teamId">
+          <option value="" th:selected="${filter == null or filter.teamId == null}">All teams</option>
+          <option th:each="t : ${teams != null ? teams : {}}" th:value="${t.id}" th:text="${t.name}"
+                  th:selected="${filter != null and filter.teamId != null and filter.teamId.toString() == t.id.toString()}">Team</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="r-from">From</label>
+        <input type="date" id="r-from" name="from" th:value="${filter?.from}"/>
+      </div>
+      <div class="field">
+        <label class="field-label" for="r-to">To</label>
+        <input type="date" id="r-to" name="to" th:value="${filter?.to}"/>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        <a class="btn btn-ghost btn-sm" th:href="@{/desk/reports}">Clear</a>
+        <a class="btn btn-ghost btn-sm" th:href="@{/desk/reports(embeded=true)}"
+           th:unless="${embeded}">Wallboard view</a>
+      </div>
+    </form>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-card__chip" aria-hidden="true">▤</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.totalActive != null ? stats.totalActive : 0}">0</span><br/>
+          <span class="stat-card__label">Active tickets</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--danger" aria-hidden="true">⏱</span>
+        <span>
+          <span class="stat-card__value stat-card__value--danger" th:text="${stats?.breached != null ? stats.breached : 0}">0</span><br/>
+          <span class="stat-card__label">Breached</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--warn" aria-hidden="true">◷</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.atRisk != null ? stats.atRisk : 0}">0</span><br/>
+          <span class="stat-card__label">At risk</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--info" aria-hidden="true">◔</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats != null and stats.avgResponseHours != null} ? ${#numbers.formatDecimal(stats.avgResponseHours, 1, 1)} + ' h' : '—'">—</span><br/>
+          <span class="stat-card__label">Avg response</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--violet" aria-hidden="true">%</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats != null and stats.breachRatePercent != null} ? ${#numbers.formatDecimal(stats.breachRatePercent, 1, 1)} + '%' : '—'">—</span><br/>
+          <span class="stat-card__label">Breach rate</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="page-head" style="margin-top:0.5rem;">
+      <h2 class="card-title">Exports</h2>
+      <div class="row">
+        <a class="btn" th:href="@{/desk/reports/export/sla(teamId=${filter?.teamId}, from=${filter?.from}, to=${filter?.to})}">⬇ SLA report</a>
+        <a class="btn" th:href="@{/desk/reports/export/tickets(from=${filter?.from}, to=${filter?.to})}">⬇ Tickets</a>
+        <a class="btn" th:href="@{/desk/reports/export/escalations(teamId=${filter?.teamId}, from=${filter?.from}, to=${filter?.to})}">⬇ Escalations</a>
+        <a class="btn" th:href="@{/desk/reports/export/pdf(title='sla-report')}">⬇ PDF report</a>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <h2 class="card-title">Per team</h2>
+        <div class="empty" th:if="${stats == null or stats.byTeam == null or #lists.isEmpty(stats.byTeam)}">
+          <span class="empty__icon" aria-hidden="true">▦</span>
+          <p class="empty__title">No team data</p>
+        </div>
+        <div class="table-wrap" th:unless="${stats == null or stats.byTeam == null or #lists.isEmpty(stats.byTeam)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>Team</th><th>Active</th><th>Breached</th><th>Avg response</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="t : ${stats.byTeam}">
+                <td th:text="${t.teamName}">Team</td>
+                <td class="num" th:text="${t.active}">0</td>
+                <td class="num" th:classappend="${t.breached > 0} ? 'strong'" th:text="${t.breached}">0</td>
+                <td class="num mono" th:text="${#numbers.formatDecimal(t.avgResponseHours, 1, 1)} + ' h'">0.0 h</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Overdue tickets</h2>
+        <div class="empty" th:if="${overdue == null or #lists.isEmpty(overdue)}">
+          <span class="empty__icon" aria-hidden="true">✓</span>
+          <p class="empty__title">Nothing overdue</p>
+        </div>
+        <div class="table-wrap" th:unless="${overdue == null or #lists.isEmpty(overdue)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>Ref</th><th>Subject</th><th>Status</th><th>Due</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="t : ${overdue}">
+                <td><a class="mono" th:href="@{/desk/tickets/{id}(id=${t.id})}" th:text="${t.ref}">TCK-1000</a></td>
+                <td class="truncate" th:text="${t.subject}">Subject</td>
+                <td><th:block th:replace="~{fragments :: statusBadge(${t.status})}">s</th:block></td>
+                <td class="mono small" th:text="${t.slaResolutionDeadline != null ? #temporals.format(t.slaResolutionDeadline, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

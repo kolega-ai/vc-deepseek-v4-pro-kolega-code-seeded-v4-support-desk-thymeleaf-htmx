@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Access denied')}"></head>
+<body th:replace="~{layout :: errorPage('🔒', 'Access denied', 'Your account does not have permission to view this page. If you believe this is a mistake, contact your administrator.', '403 · Forbidden')}"></body>
+</html>

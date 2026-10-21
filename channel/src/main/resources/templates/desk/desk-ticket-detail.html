@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{layout :: head('Ticket — RelayDesk Desk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Ticket', 'ticket-detail', ~{::breadcrumbs})}">
+  <nav th:fragment="breadcrumbs">
+    <a th:href="@{/desk/queue}">Queue</a>
+    <span class="crumbs-sep" aria-hidden="true">/</span>
+    <span class="crumbs-current mono" th:text="${detail?.ref}">TCK-1000</span>
+  </nav>
+  <main th:fragment="content">
+
+    <p><a th:href="@{/desk/queue}">‹ Back to queue</a></p>
+
+    <div class="card" th:if="${detail != null}">
+      <div class="row-between">
+        <h1 class="page-title">
+          <span class="mono" th:text="${detail.ref}">TCK-1000</span> —
+          <span th:text="${detail.subject}">Subject</span>
+        </h1>
+        <div class="row" style="flex-wrap:wrap;">
+          <th:block th:replace="~{fragments :: statusBadge(${detail.status})}">status</th:block>
+          <a class="btn btn-sm" th:if="${detail.canStatus}"
+             th:href="@{/desk/tickets/{id}/resolve(id=${detail.id})}">Resolve</a>
+          <form th:action="@{/admin/tickets/{id}/delete(id=${detail.id})}" method="post"
+                sec:authorize="hasRole('ROLE_SUPPORT_ADMIN')">
+            <button type="submit" class="btn btn-sm btn-danger"
+                    data-confirm="Permanently delete this ticket and all of its messages? This cannot be undone.">Delete</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="row" style="flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem;">
+        <th:block th:replace="~{fragments :: priorityBadge(${detail.priority})}">priority</th:block>
+        <span class="chip" th:if="${detail.categoryName != null}" th:text="${detail.categoryName}">Category</span>
+        <span class="chip chip--neutral" th:if="${detail.orgName != null}" th:text="${detail.orgName}">Org</span>
+        <span class="chip" th:if="${detail.teamName != null}" th:text="${detail.teamName}">Team</span>
+        <span class="chip chip--neutral" th:if="${detail.queueName != null}" th:text="${detail.queueName}">Queue</span>
+        <span class="muted small" th:text="${detail.requesterName != null} ? 'Requester: ' + ${detail.requesterName} : ''">Requester</span>
+        <span class="muted small" th:text="${detail.createdAt != null ? 'Opened ' + #temporals.format(detail.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+      </div>
+
+      <hr/>
+
+      <div class="deadline-line">
+        <span>Response due: <strong th:text="${detail.slaResponseDeadline != null ? #temporals.format(detail.slaResponseDeadline, 'yyyy-MM-dd HH:mm') : '—'}">—</strong></span>
+        <span>Resolution due: <strong th:text="${detail.slaResolutionDeadline != null ? #temporals.format(detail.slaResolutionDeadline, 'yyyy-MM-dd HH:mm') : '—'}">—</strong></span>
+        <th:block th:replace="~{fragments :: slaBadge(${detail.slaStatus}, false)}">sla</th:block>
+        <span class="muted small" th:if="${detail.slaPolicyName != null}" th:text="'Policy: ' + ${detail.slaPolicyName}">Policy</span>
+      </div>
+
+      <!-- Workbench: quick actions (role-gated by detail.can* booleans) -->
+      <div class="section-grid" style="grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); margin-bottom:1.1rem;">
+        <div class="card card--flat" style="border:1px solid var(--line);" th:if="${detail.canStatus}">
+          <h2 class="card-title">Change status</h2>
+          <form th:action="@{/desk/tickets/{id}/status(id=${detail.id})}" method="post">
+            <div class="field">
+              <label class="field-label" for="targetStatus">New status</label>
+              <select id="targetStatus" name="targetStatus">
+                <option value="" disabled th:selected="${statusForm == null or statusForm.targetStatus == null}">Choose status…</option>
+                <option value="NEW" th:selected="${statusForm?.targetStatus?.name() == 'NEW'}">New</option>
+                <option value="OPEN" th:selected="${statusForm?.targetStatus?.name() == 'OPEN'}">Open</option>
+                <option value="PENDING_CUSTOMER" th:selected="${statusForm?.targetStatus?.name() == 'PENDING_CUSTOMER'}">Awaiting customer</option>
+                <option value="PENDING_INTERNAL" th:selected="${statusForm?.targetStatus?.name() == 'PENDING_INTERNAL'}">Awaiting internal</option>
+                <option value="ESCALATED" th:selected="${statusForm?.targetStatus?.name() == 'ESCALATED'}">Escalated</option>
+                <option value="RESOLVED" th:selected="${statusForm?.targetStatus?.name() == 'RESOLVED'}">Resolved</option>
+                <option value="CLOSED" th:selected="${statusForm?.targetStatus?.name() == 'CLOSED'}">Closed</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="status-comment">Comment <span class="muted">(optional)</span></label>
+              <input type="text" id="status-comment" name="comment" maxlength="1000" th:value="${statusForm?.comment}"/>
+            </div>
+            <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Apply status</button></div>
+          </form>
+        </div>
+
+        <div class="card card--flat" style="border:1px solid var(--line);" th:if="${detail.canAssign}">
+          <h2 class="card-title">Assign</h2>
+          <form th:action="@{/desk/tickets/{id}/assign(id=${detail.id})}" method="post">
+            <div class="field">
+              <label class="field-label" for="assigneeId">Assignee</label>
+              <select id="assigneeId" name="assigneeId">
+                <option value="" th:selected="${assignForm == null or assignForm.assigneeId == null}">Unassigned</option>
+                <option th:each="a : ${agents != null ? agents : {}}" th:value="${a.id}"
+                        th:text="${a.displayName} + ' (' + ${a.email} + ')'"
+                        th:selected="${assignForm != null and assignForm.assigneeId != null and assignForm.assigneeId.toString() == a.id.toString()}">Agent</option>
+              </select>
+            </div>
+            <div class="field" th:if="${teams != null}">
+              <label class="field-label" for="teamId">Team</label>
+              <select id="teamId" name="teamId">
+                <option value="" th:selected="${assignForm == null or assignForm.teamId == null}">Keep current team</option>
+                <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.name}"
+                        th:selected="${assignForm != null and assignForm.teamId != null and assignForm.teamId.toString() == t.id.toString()}">Team</option>
+              </select>
+            </div>
+            <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Assign ticket</button></div>
+          </form>
+        </div>
+
+        <div class="card card--flat" style="border:1px solid var(--line);" th:if="${detail.canAssign}">
+          <h2 class="card-title">Priority</h2>
+          <form th:action="@{/desk/tickets/{id}/priority(id=${detail.id})}" method="post"
+                th:with="selPrio=${priorityForm != null and priorityForm.priority != null ? priorityForm.priority.name() : detail.priority.name()}">
+            <div class="field">
+              <label class="field-label" for="new-priority">New priority</label>
+              <select id="new-priority" name="priority">
+                <option value="LOW" th:selected="${selPrio == 'LOW'}">Low</option>
+                <option value="MEDIUM" th:selected="${selPrio == 'MEDIUM'}">Medium</option>
+                <option value="HIGH" th:selected="${selPrio == 'HIGH'}">High</option>
+                <option value="URGENT" th:selected="${selPrio == 'URGENT'}">Urgent</option>
+              </select>
+            </div>
+            <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Update priority</button></div>
+          </form>
+        </div>
+
+        <div class="card card--flat" style="border:1px solid var(--line);" th:if="${detail.canClaim}">
+          <h2 class="card-title">Claim</h2>
+          <p class="muted small">This ticket is unassigned. Claim it to start working on it.</p>
+          <form th:action="@{/desk/tickets/{id}/claim(id=${detail.id})}" method="post">
+            <div class="form-actions"><button type="submit" class="btn btn-primary">Claim ticket</button></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Ticket sections">
+        <button type="button" role="tab" class="is-active" aria-selected="true" aria-controls="tab-conversation">Conversation</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tab-timeline">SLA timeline</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tab-escalation">Escalation</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tab-audit">Audit history</button>
+      </div>
+
+      <!-- Conversation -->
+      <section id="tab-conversation" class="tab-panel" role="tabpanel" aria-label="Conversation">
+        <div class="thread">
+          <div class="empty" th:if="${detail.messages == null or #lists.isEmpty(detail.messages)}">
+            <span class="empty__icon" aria-hidden="true">✉</span>
+            <p class="empty__title">No messages yet</p>
+          </div>
+          <article th:each="m : ${detail.messages}" class="msg" th:classappend="${m.internal} ? 'msg--internal'">
+            <div class="msg-head">
+              <span class="msg-author" th:text="${m.authorName}">Author</span>
+              <span class="msg-role" th:text="${m.authorRole}">role</span>
+              <span class="chip chip--violet" th:if="${m.internal}">Internal note</span>
+              <time class="msg-time" th:attr="data-timestamp=${m.createdAt}"
+                    th:text="${m.createdAt != null ? #temporals.format(m.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</time>
+            </div>
+            <div class="msg-body" th:text="${m.body}">Message body</div>
+          </article>
+        </div>
+
+        <form class="card card--flat" th:if="${detail.canReply}"
+              th:action="@{/desk/tickets/{id}/reply(id=${detail.id})}" method="post"
+              style="margin-top:1rem; border:1px solid var(--line);">
+          <div class="field">
+            <label class="field-label" for="reply-body">Public reply</label>
+            <textarea id="reply-body" name="body" required maxlength="8000" rows="4"
+                      placeholder="Visible to the customer…"></textarea>
+          </div>
+          <div class="field">
+            <label class="field-label" for="mention-q">Mention someone</label>
+            <input type="search" id="mention-q" name="q" autocomplete="off"
+                   placeholder="Start typing a name…"
+                   th:attr="hx-get=@{/desk/tickets/{id}/mentions(id=${detail.id})}"
+                   hx-trigger="keyup changed delay:300ms" hx-target="#mention-suggestions"
+                   hx-swap="outerHTML"/>
+            <ul class="list-plain" id="mention-suggestions"></ul>
+          </div>
+          <div class="form-actions"><button type="submit" class="btn btn-primary">Send reply</button></div>
+        </form>
+
+        <form class="card card--flat" th:if="${detail.canNote}"
+              th:action="@{/desk/tickets/{id}/note(id=${detail.id})}" method="post"
+              style="margin-top:1rem; border:1px solid var(--line); background:#F7F5FD;">
+          <div class="field">
+            <label class="field-label" for="note-body">Internal note</label>
+            <textarea id="note-body" name="body" required maxlength="8000" rows="3"
+                      placeholder="Only your team can see this…"></textarea>
+          </div>
+          <div class="form-actions"><button type="submit" class="btn">Add internal note</button></div>
+        </form>
+
+        <hr/>
+
+        <h2 class="card-title">Attachments</h2>
+        <div class="table-wrap" th:if="${detail.attachments != null and !#lists.isEmpty(detail.attachments)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>File</th><th>Category</th><th>Uploaded</th><th>Size</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="a : ${detail.attachments}">
+                <td class="cell-main" th:text="${a.originalName}">file.pdf</td>
+                <td>
+                  <span class="chip chip--violet" th:if="${a.category != null and a.category.name() == 'INTERNAL_DOCUMENT'}">Internal</span>
+                  <span class="chip chip--neutral" th:if="${a.category != null and a.category.name() == 'CUSTOMER_ATTACHMENT'}">Customer</span>
+                </td>
+                <td class="mono" th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+                <td class="mono" th:text="${#numbers.formatDecimal(a.sizeBytes / 1024.0, 1, 1)} + ' KB'">1.0 KB</td>
+                <td>
+                  <a class="btn btn-sm" th:href="@{/desk/tickets/{id}/attachments/{attId}(id=${detail.id}, attId=${a.id})}">Download</a>
+                  <a class="btn btn-sm" th:href="@{/desk/tickets/{id}/attachments/{attId}/preview(id=${detail.id}, attId=${a.id})}" target="_blank">Preview</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="empty" th:if="${detail.attachments == null or #lists.isEmpty(detail.attachments)}">
+          <span class="empty__icon" aria-hidden="true">📎</span>
+          <p class="empty__title">No attachments</p>
+        </div>
+
+        <form class="card card--flat" sec:authorize="hasAnyRole('ROLE_SUPPORT_AGENT','ROLE_TEAM_LEAD','ROLE_SUPPORT_ADMIN')"
+              th:action="@{/desk/tickets/{id}/attachments(id=${detail.id})}" method="post" enctype="multipart/form-data"
+              style="margin-top:1rem; border:1px solid var(--line);">
+          <div class="form-grid">
+            <div class="field file-field">
+              <label class="field-label" for="staff-att-file">Upload attachment</label>
+              <input type="file" id="staff-att-file" name="file" required/>
+              <span class="file-label" data-file-label data-file-label-default="No file chosen">No file chosen</span>
+            </div>
+            <input type="hidden" name="rtn"
+                   th:value="@{/desk/tickets/{id}(id=${detail.id})} + '#tab-attachments'"/>
+            <div class="field">
+              <label class="field-label" for="staff-att-category">Category</label>
+              <select id="staff-att-category" name="category">
+                <option value="CUSTOMER_ATTACHMENT">Customer attachment</option>
+                <option value="INTERNAL_DOCUMENT">Internal document</option>
+              </select>
+              <p class="field-hint">Internal documents are never visible to customers.</p>
+            </div>
+          </div>
+          <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Upload</button></div>
+        </form>
+      </section>
+
+      <!-- SLA timeline -->
+      <section id="tab-timeline" class="tab-panel" role="tabpanel" aria-label="SLA timeline" hidden>
+        <th:block th:replace="~{fragments :: timeline(${detail})}"></th:block>
+      </section>
+
+      <!-- Escalation -->
+      <section id="tab-escalation" class="tab-panel" role="tabpanel" aria-label="Escalation" hidden>
+        <div class="card card--flat" style="border:1px solid var(--line);" th:if="${detail.escalation != null}">
+          <div class="card-head">
+            <h2 class="card-title">Escalation</h2>
+            <a class="btn btn-sm" th:href="@{/desk/escalations/{id}(id=${detail.escalation.id})}">Open escalation</a>
+          </div>
+          <p>
+            <th:block th:replace="~{fragments :: escalationStatusBadge(${detail.escalation.status})}">status</th:block>
+            <span class="muted small" th:if="${detail.escalation.teamName != null}"> · Team: <strong th:text="${detail.escalation.teamName}">Team</strong></span>
+            <span class="muted small" th:if="${detail.escalation.assigneeName != null}"> · Assignee: <strong th:text="${detail.escalation.assigneeName}">Lead</strong></span>
+          </p>
+          <div class="card card--flat" style="background:#F7F5FD; border:1px solid #DDD3F5;">
+            <p class="small strong" style="color:var(--violet);">Internal — not visible to customers</p>
+            <p class="pre-wrap" th:text="${detail.escalation.reason}">Reason</p>
+            <p class="muted small" th:if="${detail.escalation.slaException}">
+              ⚠ SLA exception granted:
+              <span th:text="${#objects.nullSafe(detail, 'slaExceptionReason')}">reason</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="card card--flat" style="border:1px solid var(--line);" th:unless="${detail.escalation != null}">
+          <h2 class="card-title">Escalation</h2>
+          <p class="muted">Not escalated.</p>
+          <form th:if="${detail.canEscalate}" th:action="@{/desk/tickets/{id}/escalate(id=${detail.id})}" method="post">
+            <div class="field">
+              <label class="field-label req" for="esc-reason">Reason</label>
+              <textarea id="esc-reason" name="reason" required maxlength="2000" rows="4"
+                        placeholder="Why does this ticket need a team lead?"
+                        th:text="${escalateForm?.reason}"></textarea>
+            </div>
+            <div class="field">
+              <label class="check-line">
+                <input type="checkbox" name="slaException" value="true" th:checked="${escalateForm?.slaException}"/>
+                <span>Grant an SLA exception (pause deadlines)</span>
+              </label>
+            </div>
+            <div class="field">
+              <label class="field-label" for="esc-sla-reason">SLA exception reason <span class="muted">(required if checked)</span></label>
+              <input type="text" id="esc-sla-reason" name="slaExceptionReason" maxlength="2000"
+                     th:value="${escalateForm?.slaExceptionReason}"/>
+            </div>
+            <div class="form-actions"><button type="submit" class="btn btn-warn">Escalate ticket</button></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Audit history -->
+      <section id="tab-audit" class="tab-panel" role="tabpanel" aria-label="Audit history" hidden>
+        <div class="table-wrap" th:if="${detail.audit != null and !#lists.isEmpty(detail.audit)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>Time</th><th>Actor</th><th>Action</th><th>Before → After</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="r : ${detail.audit}">
+                <td class="cell-slim mono" th:attr="data-timestamp=${r.occurredAt}"
+                    th:text="${r.occurredAt != null ? #temporals.format(r.occurredAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+                <td class="mono" th:text="${r.actorEmail}">actor</td>
+                <td><span class="chip chip--info mono" th:text="${r.action}">action</span></td>
+                <td>
+                  <span class="truncate mono small muted" th:if="${r.beforeValue != null and !r.beforeValue.isEmpty()}" th:text="${r.beforeValue}">before</span>
+                  <span class="muted small" th:if="${r.beforeValue != null and !r.beforeValue.isEmpty() or r.afterValue != null and !r.afterValue.isEmpty()}"> → </span>
+                  <span class="truncate mono small" th:if="${r.afterValue != null and !r.afterValue.isEmpty()}" th:text="${r.afterValue}">after</span>
+                  <span class="muted small" th:if="${(r.beforeValue == null or r.beforeValue.isEmpty()) and (r.afterValue == null or r.afterValue.isEmpty())}">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="empty" th:if="${detail.audit == null or #lists.isEmpty(detail.audit)}">
+          <span class="empty__icon" aria-hidden="true">≡</span>
+          <p class="empty__title">No audit events yet</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="empty" th:unless="${detail != null}">
+      <span class="empty__icon" aria-hidden="true">🔍</span>
+      <p class="empty__title">Ticket not found</p>
+      <p class="empty__hint">It may have been removed, or it is outside your scope.</p>
+      <a class="btn btn-primary" th:href="@{/desk/queue}">Back to queue</a>
+    </div>
+
+  </main>
+</body>
+</html>

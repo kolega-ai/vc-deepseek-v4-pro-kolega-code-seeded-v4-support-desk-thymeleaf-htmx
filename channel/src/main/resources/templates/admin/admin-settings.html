@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Settings — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Settings', 'settings', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-sub">Limits, storage, mail outbox and webhook delivery status.</p>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <h2 class="card-title">Role limits <span class="muted small">(decision tier)</span></h2>
+        <div class="empty" th:if="${limits == null or #lists.isEmpty(limits)}">
+          <span class="empty__icon" aria-hidden="true">◈</span>
+          <p class="empty__title">No limits configured</p>
+        </div>
+        <ul class="list-plain" th:unless="${limits == null or #lists.isEmpty(limits)}">
+          <li th:each="e : ${limits}">
+            <span class="grow mono small" th:text="${e.key}">limit</span>
+            <strong th:text="${e.value}">0</strong>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Attachment storage</h2>
+        <ul class="list-plain">
+          <li>
+            <span class="grow">Attachment directory</span>
+            <span class="mono small" th:text="${#objects.nullSafe(storage, 'attachmentDir')}">/data/attachments</span>
+          </li>
+          <li>
+            <span class="grow">Max upload</span>
+            <strong th:text="${#objects.nullSafe(storage, 'maxUploadMb')} + ' MB'">10 MB</strong>
+          </li>
+        </ul>
+        <p class="field-hint" style="margin-top:0.5rem;">
+          Files are stored under UUID names; downloads resolve through a canonicalised base directory,
+          are audited per download and served with nosniff headers.
+        </p>
+        <form class="row" style="margin-top:0.5rem; gap:0.4rem;"
+              th:attr="hx-get=@{/settings/storage/attributes}"
+              hx-target="#storage-attributes" hx-swap="outerHTML">
+          <input type="text" name="name" placeholder="stored file name" style="width:auto; min-width:220px;"/>
+          <button type="submit" class="btn btn-sm">Inspect</button>
+        </form>
+        <div id="storage-attributes" th:replace="~{fragments :: storageAttributes}"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Integrations</h2>
+        <ul class="list-plain">
+          <li>
+            <span class="grow">Customer core</span>
+            <span class="mono small" th:text="${integration?.coreUrl}">http://core:8082</span>
+          </li>
+          <li>
+            <span class="grow">Core service credential</span>
+            <span class="mono small" th:text="${integration?.coreKey}">key</span>
+          </li>
+          <li>
+            <span class="grow">Decision tier</span>
+            <span class="mono small" th:text="${integration?.decisionUrl}">http://decision:8081</span>
+          </li>
+        </ul>
+        <div class="form-actions">
+          <button type="button" class="btn btn-sm"
+                  th:attr="hx-get=@{/admin/settings/status/{t}(t=${#strings.replace(#strings.replace(integration?.coreUrl ?: 'localhost:8082','http://',''),'/','')})}"
+                  hx-target="#downstream-status" hx-swap="outerHTML">Check downstream</button>
+        </div>
+        <div id="downstream-status"><p class="muted small">Not checked yet.</p></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Webhook delivery</h2>
+        <p class="small">Manage endpoints and inspect delivery attempts on the
+          <a th:href="@{/admin/webhooks}">webhooks page</a>.</p>
+        <div class="table-wrap" th:if="${attempts != null and !#lists.isEmpty(attempts)}">
+          <table class="table table--mini">
+            <thead><tr><th>Endpoint</th><th>Event</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody>
+              <tr th:each="a : ${attempts}">
+                <td class="truncate" th:text="${a.endpointName}">endpoint</td>
+                <td class="mono small" th:text="${a.event}">event</td>
+                <td>
+                  <span class="badge badge--green" th:if="${a.status != null and a.status.name() == 'SUCCEEDED'}"><span class="badge-dot" aria-hidden="true"></span>Delivered</span>
+                  <span class="badge badge--red" th:if="${a.status != null and a.status.name() == 'FAILED'}"><span class="badge-dot" aria-hidden="true"></span>Failed</span>
+                  <span class="badge badge--amber" th:if="${a.status == null or a.status.name() == 'PENDING'}"><span class="badge-dot" aria-hidden="true"></span>Pending</span>
+                </td>
+                <td class="cell-slim mono" th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted small" th:if="${attempts == null or #lists.isEmpty(attempts)}">No recent delivery attempts.</p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Mail outbox <span class="muted small">(local mock)</span></h2>
+        <div class="empty" th:if="${outbox == null or outbox.content == null or #lists.isEmpty(outbox.content)}">
+          <span class="empty__icon" aria-hidden="true">✉</span>
+          <p class="empty__title">No emails yet</p>
+        </div>
+        <div class="table-wrap" th:unless="${outbox == null or outbox.content == null or #lists.isEmpty(outbox.content)}">
+          <table class="table table--mini">
+            <thead><tr><th>To</th><th>Subject</th><th>Status</th><th>Sent</th></tr></thead>
+            <tbody>
+              <tr th:each="m : ${outbox.content}">
+                <td class="mono" th:text="${m.toAddress}">to</td>
+                <td class="truncate" th:text="${m.subject}">subject</td>
+                <td>
+                  <span class="badge badge--green" th:if="${m.status != null and m.status.name() == 'SENT'}"><span class="badge-dot" aria-hidden="true"></span>Sent</span>
+                  <span class="badge badge--red" th:if="${m.status != null and m.status.name() == 'FAILED'}"><span class="badge-dot" aria-hidden="true"></span>Failed</span>
+                  <span class="badge badge--amber" th:if="${m.status == null or m.status.name() == 'PENDING'}"><span class="badge-dot" aria-hidden="true"></span>Pending</span>
+                </td>
+                <td class="cell-slim mono" th:text="${m.sentAt != null ? #temporals.format(m.sentAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">About</h2>
+        <ul class="list-plain">
+          <li><span class="grow">Product</span><strong>RelayDesk</strong></li>
+          <li><span class="grow">Tier</span><span>Channel — user-facing web application (port 8080)</span></li>
+          <li><span class="grow">Platform</span><span class="mono small">Spring Boot 3.3 · Thymeleaf · htmx 2.0 · PostgreSQL 16</span></li>
+          <li><span class="grow">Authorization</span><span>Decision tier is authoritative for role, scope and limits</span></li>
+        </ul>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

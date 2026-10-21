@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Service unavailable')}"></head>
+<body th:replace="~{layout :: errorPage('🛠️', 'Service unavailable', 'RelayDesk cannot reach its authorization service right now. Please try again in a minute.', '503 · Unavailable')}"></body>
+</html>

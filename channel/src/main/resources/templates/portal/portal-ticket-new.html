@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('New Ticket — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'New Ticket', 'ticket-new', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">New Ticket</h1>
+        <p class="page-sub">Tell us what is going on and we will route it to the right team.</p>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:820px;">
+      <form th:action="@{/portal/tickets}" method="post" enctype="multipart/form-data">
+        <div class="form-grid">
+          <div class="field field--wide">
+            <label class="field-label req" for="subject">Subject</label>
+            <input type="text" id="subject" name="subject" required maxlength="200"
+                   placeholder="Short summary of the issue"
+                   th:value="${form?.subject}"/>
+          </div>
+          <div class="field">
+            <label class="field-label req" for="categoryId">Category</label>
+            <select id="categoryId" name="categoryId" required>
+              <option value="" disabled th:selected="${form == null or form.categoryId == null}">Choose a category…</option>
+              <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
+                      th:selected="${form != null and form.categoryId != null and form.categoryId.toString() == c.id.toString()}">Category</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="priority">Priority</label>
+            <select id="priority" name="priority">
+              <option value="LOW" th:selected="${form?.priority?.name() == 'LOW'}">Low</option>
+              <option value="MEDIUM" th:selected="${form == null or form.priority == null or form.priority.name() == 'MEDIUM'}">Medium</option>
+              <option value="HIGH" th:selected="${form?.priority?.name() == 'HIGH'}">High</option>
+              <option value="URGENT" th:selected="${form?.priority?.name() == 'URGENT'}">Urgent</option>
+            </select>
+            <p class="field-hint">SLA deadlines are applied per priority by our team.</p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="contactId">Contact</label>
+            <select id="contactId" name="contactId">
+              <option value="" th:selected="${form == null or form.contactId == null}">Any contact</option>
+              <option th:each="c : ${contacts != null ? contacts : {}}" th:value="${c.id}"
+                      th:text="${c.firstName} + ' ' + ${c.lastName} + ' (' + ${c.email} + ')'"
+                      th:selected="${form != null and form.contactId != null and form.contactId.toString() == c.id.toString()}">Contact</option>
+            </select>
+          </div>
+          <div class="field field--wide">
+            <label class="field-label req" for="description">Description</label>
+            <textarea id="description" name="description" required maxlength="8000" rows="8"
+                      placeholder="What happened, what did you expect, and how can we reproduce it?"
+                      th:text="${form?.description}"></textarea>
+          </div>
+          <div class="field field--wide file-field">
+            <label class="field-label" for="file">Attachment <span class="muted">(optional)</span></label>
+            <input type="file" id="file" name="file"/>
+            <span class="file-label" data-file-label data-file-label-default="No file chosen">No file chosen</span>
+            <p class="field-hint">CSV, PNG, JPEG, PDF or plain text, up to 10 MB.</p>
+          </div>
+        </div>
+        <p class="field-hint" th:if="${slaHint}" th:text="${slaHint}">SLA deadlines are applied server-side per priority.</p>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create ticket</button>
+          <a class="btn" th:href="@{/portal/tickets}">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+  </main>
+</body>
+</html>

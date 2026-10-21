@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Something went wrong')}"></head>
+<body th:replace="~{layout :: errorPage('⚠️', 'Something went wrong', 'An unexpected error occurred. Please try again in a moment, or return to the home page.', 'Error')}"></body>
+</html>

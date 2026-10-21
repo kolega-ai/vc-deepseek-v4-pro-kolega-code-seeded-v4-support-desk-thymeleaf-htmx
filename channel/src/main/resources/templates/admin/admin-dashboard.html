@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Admin — RelayDesk')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Admin Overview', 'admin-home', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Admin overview</h1>
+        <p class="page-sub">System counts, health and integration activity.</p>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-card__chip" aria-hidden="true">▤</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.totalTickets != null ? stats.totalTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Total tickets</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--info" aria-hidden="true">▤</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.openTickets != null ? stats.openTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Open</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--danger" aria-hidden="true">⏱</span>
+        <span>
+          <span class="stat-card__value stat-card__value--danger" th:text="${stats?.overdueTickets != null ? stats.overdueTickets : 0}">0</span><br/>
+          <span class="stat-card__label">Overdue</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--warn" aria-hidden="true">⚑</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.pendingEscalations != null ? stats.pendingEscalations : 0}">0</span><br/>
+          <span class="stat-card__label">Pending escalations</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--violet" aria-hidden="true">▣</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.kbPublished != null ? stats.kbPublished : 0}">0</span><br/>
+          <span class="stat-card__label">KB published</span>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__chip stat-card__chip--info" aria-hidden="true">✓</span>
+        <span>
+          <span class="stat-card__value" th:text="${stats?.resolvedToday != null ? stats.resolvedToday : 0}">0</span><br/>
+          <span class="stat-card__label">Resolved today</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- System health -->
+    <div class="section-grid" style="margin-bottom:1rem;">
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Decision (authorization)</h2>
+          <span class="health-dot" th:classappend="${system != null and system.decisionOk} ? 'health-dot--ok' : 'health-dot--bad'"
+                aria-hidden="true"></span>
+        </div>
+        <p class="small" th:if="${system != null and system.decisionOk}">Connected — role, scope and limits are resolved on every request.</p>
+        <p class="small strong" style="color:var(--danger);" th:if="${system == null or !system.decisionOk}"
+           th:text="${system != null and system.message != null} ? ${system.message} : 'Unreachable — requests fail closed.'">Unreachable</p>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Customer core (CRM)</h2>
+          <span class="health-dot" th:classappend="${system != null and system.coreOk} ? 'health-dot--ok' : 'health-dot--bad'"
+                aria-hidden="true"></span>
+        </div>
+        <p class="small" th:if="${system != null and system.coreOk}">Connected — org and contact data is available.</p>
+        <p class="small strong" style="color:var(--danger);" th:if="${system == null or !system.coreOk}"
+           th:text="${system != null and system.message != null} ? ${system.message} : 'Unreachable — core-dependent pages will fail.'">Unreachable</p>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Outbox</h2>
+          <a class="btn btn-sm" th:href="@{/admin/settings}">Settings</a>
+        </div>
+        <p class="small">
+          <span class="strong" th:text="${outbox != null and outbox.content != null ? #lists.size(outbox.content.?[status.name() == 'PENDING']) : 0}">0</span>
+          pending emails in the recent outbox window.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Webhooks</h2>
+          <a class="btn btn-sm" th:href="@{/admin/webhooks}">Webhooks</a>
+        </div>
+        <p class="small">
+          <span class="strong" th:text="${attempts != null and attempts.content != null ? #lists.size(attempts.content.?[status.name() == 'PENDING']) : 0}">0</span>
+          pending delivery attempts in the recent window.
+        </p>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Recent outbox emails</h2>
+        </div>
+        <div class="empty" th:if="${outbox == null or outbox.content == null or #lists.isEmpty(outbox.content)}">
+          <span class="empty__icon" aria-hidden="true">✉</span>
+          <p class="empty__title">No emails sent yet</p>
+        </div>
+        <div class="table-wrap" th:unless="${outbox == null or outbox.content == null or #lists.isEmpty(outbox.content)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>To</th><th>Subject</th><th>Status</th><th>Time</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="m : ${outbox.content}">
+                <td class="mono" th:text="${m.toAddress}">to</td>
+                <td class="truncate" th:text="${m.subject}">subject</td>
+                <td>
+                  <span class="badge badge--green" th:if="${m.status != null and m.status.name() == 'SENT'}"><span class="badge-dot" aria-hidden="true"></span>Sent</span>
+                  <span class="badge badge--red" th:if="${m.status != null and m.status.name() == 'FAILED'}"><span class="badge-dot" aria-hidden="true"></span>Failed</span>
+                  <span class="badge badge--amber" th:if="${m.status == null or m.status.name() == 'PENDING'}"><span class="badge-dot" aria-hidden="true"></span>Pending</span>
+                </td>
+                <td class="cell-slim mono" th:text="${m.sentAt != null ? #temporals.format(m.sentAt, 'yyyy-MM-dd HH:mm') : (m.createdAt != null ? #temporals.format(m.createdAt, 'yyyy-MM-dd HH:mm') : '—')}">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2 class="card-title">Recent webhook attempts</h2>
+            <a class="btn btn-sm" th:href="@{/admin/webhooks}">All attempts</a>
+          </div>
+          <div class="empty" th:if="${attempts == null or attempts.content == null or #lists.isEmpty(attempts.content)}">
+            <span class="empty__icon" aria-hidden="true">⌁</span>
+            <p class="empty__title">No attempts yet</p>
+          </div>
+          <ul class="list-plain" th:unless="${attempts == null or attempts.content == null or #lists.isEmpty(attempts.content)}">
+            <li th:each="a : ${attempts.content}">
+              <span class="grow truncate" th:text="${a.endpointName} + ' — ' + ${a.event}">endpoint</span>
+              <span class="badge badge--green" th:if="${a.status != null and a.status.name() == 'SUCCEEDED'}"><span class="badge-dot" aria-hidden="true"></span>Delivered</span>
+              <span class="badge badge--red" th:if="${a.status != null and a.status.name() == 'FAILED'}"><span class="badge-dot" aria-hidden="true"></span>Failed</span>
+              <span class="badge badge--amber" th:if="${a.status == null or a.status.name() == 'PENDING'}"><span class="badge-dot" aria-hidden="true"></span>Pending</span>
+              <span class="mono small" th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm') : ''}">—</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2 class="card-title">Quick actions</h2>
+          </div>
+          <div class="quick-actions">
+            <a th:href="@{/admin/imports}"><span aria-hidden="true">⇑</span> Imports</a>
+            <a th:href="@{/admin/exports}"><span aria-hidden="true">⇓</span> Exports</a>
+            <a th:href="@{/admin/webhooks}"><span aria-hidden="true">⌁</span> Webhooks</a>
+            <a th:href="@{/admin/users}"><span aria-hidden="true">♟</span> Users</a>
+            <a th:href="@{/admin/orgs}"><span aria-hidden="true">⌂</span> Customer directory</a>
+            <a th:href="@{/admin/sla}"><span aria-hidden="true">◷</span> SLA policies</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

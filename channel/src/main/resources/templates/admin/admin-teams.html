@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Teams & Queues — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Teams & Queues', 'teams', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Teams &amp; Queues</h1>
+        <p class="page-sub">Routing structure: teams own queues, queues organise tickets.</p>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <!-- Teams -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Teams</h2>
+        </div>
+
+        <div class="empty" th:if="${teams == null or #lists.isEmpty(teams)}">
+          <span class="empty__icon" aria-hidden="true">▦</span>
+          <p class="empty__title">No teams yet</p>
+        </div>
+
+        <th:block th:each="t : ${teams}" th:with="hasCount=${#objects.nullSafe(teams[0], 'memberCount') != null}">
+          <div class="card card--flat" style="border:1px solid var(--line); margin-bottom:0.8rem;">
+            <div class="row-between">
+              <strong th:text="${t.name}">Team</strong>
+              <span class="chip chip--neutral" th:if="${hasCount}" th:text="${t.memberCount} + ' members'">3 members</span>
+            </div>
+            <p class="muted small" th:text="${t.description}">Description</p>
+            <form class="inline-edit" th:action="@{/admin/teams/{id}(id=${t.id})}" method="post">
+              <input type="text" name="name" required maxlength="100" aria-label="Team name" th:value="${t.name}"/>
+              <input type="text" name="description" maxlength="500" aria-label="Team description" th:value="${t.description}"/>
+              <button type="submit" class="btn btn-sm btn-primary">Save</button>
+            </form>
+            <form th:action="@{/admin/teams/{id}/delete(id=${t.id})}" method="post" class="inline-edit" style="margin-top:0.4rem;">
+              <button type="submit" class="btn btn-sm btn-danger"
+                      data-confirm="Delete this team? Tickets must be reassigned first.">Delete</button>
+            </form>
+          </div>
+        </th:block>
+
+        <hr/>
+        <h2 class="card-title">Create team</h2>
+        <form th:action="@{/admin/teams}" method="post">
+          <div class="field">
+            <label class="field-label req" for="t-name">Name</label>
+            <input type="text" id="t-name" name="name" required maxlength="100" th:value="${teamForm?.name}"/>
+          </div>
+          <div class="field">
+            <label class="field-label" for="t-desc">Description</label>
+            <input type="text" id="t-desc" name="description" maxlength="500" th:value="${teamForm?.description}"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">Create team</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Queues -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Queues</h2>
+        </div>
+
+        <div class="empty" th:if="${queues == null or #lists.isEmpty(queues)}">
+          <span class="empty__icon" aria-hidden="true">▤</span>
+          <p class="empty__title">No queues yet</p>
+        </div>
+
+        <div class="table-wrap" th:unless="${queues == null or #lists.isEmpty(queues)}">
+          <table class="table table--mini">
+            <thead>
+              <tr><th>Name</th><th>Team</th><th>Description</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="q : ${queues}">
+                <td colspan="3">
+                  <form class="inline-edit" th:action="@{/admin/queues/{id}(id=${q.id})}" method="post">
+                    <input type="text" name="name" required maxlength="100" aria-label="Queue name" th:value="${q.name}"/>
+                    <select name="teamId" aria-label="Team" required>
+                      <option th:each="t : ${teams != null ? teams : {}}" th:value="${t.id}" th:text="${t.name}"
+                              th:selected="${q.teamId != null and q.teamId.toString() == t.id.toString()}">Team</option>
+                    </select>
+                    <input type="text" name="description" maxlength="500" aria-label="Queue description" th:value="${q.description}"/>
+                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                  </form>
+                </td>
+                <td>
+                  <form th:action="@{/admin/queues/{id}/delete(id=${q.id})}" method="post">
+                    <button type="submit" class="btn btn-sm btn-danger" data-confirm="Delete this queue?">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <hr/>
+        <h2 class="card-title">Create queue</h2>
+        <form th:action="@{/admin/queues}" method="post">
+          <div class="field">
+            <label class="field-label req" for="q-name">Name</label>
+            <input type="text" id="q-name" name="name" required maxlength="100" th:value="${queueForm?.name}"/>
+          </div>
+          <div class="field">
+            <label class="field-label req" for="q-team">Team</label>
+            <select id="q-team" name="teamId" required>
+              <option value="" disabled th:selected="${queueForm == null or queueForm.teamId == null}">Choose a team…</option>
+              <option th:each="t : ${teams != null ? teams : {}}" th:value="${t.id}" th:text="${t.name}"
+                      th:selected="${queueForm != null and queueForm.teamId != null and queueForm.teamId.toString() == t.id.toString()}">Team</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="q-desc">Description</label>
+            <input type="text" id="q-desc" name="description" maxlength="500" th:value="${queueForm?.description}"/>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">Create queue</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

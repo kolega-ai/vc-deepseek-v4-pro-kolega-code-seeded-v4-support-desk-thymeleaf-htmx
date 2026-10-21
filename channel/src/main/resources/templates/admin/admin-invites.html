@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Invites — RelayDesk Admin')}"></head>
+<body th:replace="~{layout :: shell(~{::content}, 'Invites', 'users', ~{})}">
+  <main th:fragment="content">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Invites</h1>
+        <p class="page-sub">Customer invitations, valid for 7 days.</p>
+      </div>
+      <a class="btn btn-primary" th:href="@{/admin/users}">‹ Back to users</a>
+    </div>
+
+    <div class="card">
+      <div class="empty" th:if="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+        <span class="empty__icon" aria-hidden="true">✉</span>
+        <p class="empty__title">No invites sent yet</p>
+        <p class="empty__hint">Invite customers from the Users page.</p>
+      </div>
+
+      <div class="table-wrap" th:unless="${page == null or page.content == null or #lists.isEmpty(page.content)}">
+        <table class="table">
+          <thead>
+            <tr><th>Email</th><th>Name</th><th>Org</th><th>Invited</th><th>Expires</th><th>Used</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="i : ${page.content}">
+              <td class="cell-main mono" th:text="${i.email}">email</td>
+              <td th:text="${i.displayName}">name</td>
+              <td th:text="${i.orgName}">org</td>
+              <td class="mono" th:text="${i.createdAt != null ? #temporals.format(i.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              <td class="mono" th:text="${i.expiresAt != null ? #temporals.format(i.expiresAt, 'yyyy-MM-dd HH:mm') : '—'}">—</td>
+              <td>
+                <span class="badge badge--green" th:if="${i.usedAt != null}"><span class="badge-dot" aria-hidden="true"></span>Used</span>
+                <span class="badge badge--amber" th:unless="${i.usedAt != null}"><span class="badge-dot" aria-hidden="true"></span>Pending</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <th:block th:replace="~{fragments :: pagination(${page}, '/admin/invites', '')}"></th:block>
+    </div>
+
+  </main>
+</body>
+</html>
